@@ -1,34 +1,23 @@
 # Agent protocol
 
-This repository uses one warm Astra parent and **physical fixed-model subagents**.
-
-| Role/tier | Profile | Authority |
-| --- | --- | --- |
-| Tiny warm / architecture / integration | Astra Orchestrator direct | Parent authority |
-| Discovery | Scout Luna | Read-only |
-| Narrow research | Research Luna | Read-only |
-| Synthesis research | Research Terra | Read-only |
-| Mechanical writer | Execute Luna | Scoped writes |
-| General writer | Execute Terra | Scoped writes |
-| Deep bounded writer | Execute Sol | Scoped writes |
-| Difficult debugging | Debug Sol | Scoped writes |
-| Deterministic verification | Verify Luna | Read-only + commands |
-| Semantic verification | Verify Terra | Read-only + commands |
-| Deep high-risk verification | Verify Sol | Read-only + commands |
+This repository uses one Astra parent and physical fixed-model subagents.
 
 Rules:
-1. Select the cheapest **physical profile** likely to succeed and be verifiable; do not depend on runtime model override.
-2. Escalate capability monotonically Luna -> Terra -> Sol -> Astra; at most one short Luna correction for an obvious local failure.
-3. Subagents are isolated and non-recursive (`agents: []`, no `agent` tool).
-4. Parallel writers require disjoint file ownership and stable interfaces. Default fan-out <= 3.
-5. Search/read narrowly; never copy the parent transcript into a worker.
-6. Deterministic validation precedes semantic verification where possible.
-7. Security/privacy policy, irreversible decisions, public contracts, architecture, model disagreement, and final acceptance return to Astra.
-8. No adjacent cleanup outside acceptance criteria.
-9. In Copilot CLI `Auto`, exact profile model pinning may be overridden by the resolved session model; see `docs/model-routing-surfaces.md`.
+1. Select the lowest **risk-feasible physical route**, not merely the cheapest first call.
+2. Routing considers `p(correct)`, failure detection/oracle strength, hidden-defect cost, context warmth, dispatch/rework cost, and latency sensitivity.
+3. Capability escalation is monotone, but intermediate tiers may be skipped (`Luna -> Sol -> Astra` is valid).
+4. Same-tier retry is conditional on positive expected value; no conceptual retry after disconfirming evidence.
+5. Every writer self-validates with the cheapest decisive check. Do not automatically duplicate it with `Verify Luna`.
+6. Use Scout only when expected information value exceeds Scout + ingestion cost.
+7. Default writer fan-out is 1; use 2 conditionally; 3 is exceptional cap.
+8. Parallel writers require disjoint ownership and stable interfaces.
+9. Subagents are isolated/non-recursive (`agents: []`, no `agent` tool).
+10. Search/read narrowly; never copy parent transcript into a worker.
+11. Security/privacy policy, irreversible decisions, public contracts, architecture, disagreement, and final acceptance return to Astra.
+12. Keep Auto runs separate from fixed-tier calibration unless resolved model is recorded.
 
 Parent packet: `GOAL`, `SCOPE`, `KNOWN`, `CONSTRAINTS`, `ACCEPTANCE`, `VALIDATION`, `STOP`.
 
 Worker result: `STATUS`, `SUMMARY` (<= 6 bullets), `CHANGED`, `VALIDATION`, `RISKS`, `NEXT`.
 
-A task is complete only after evidence-based validation and Astra final acceptance for cross-file, high-risk, or architectural work.
+Research/design rationale: `docs/research/2026-09-09-deep-routing-research.md` and `docs/adr/0001-risk-aware-routing.md`.

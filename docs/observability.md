@@ -1,31 +1,20 @@
 # Measure and calibrate Copilot routing
 
-Optimization requires measured *successful-task* cost.
+Measure **validated-task economics**, not target model mix.
 
-## What to observe
+Record metadata when available: task/risk class, start model, `reached_after`, oracle strength, requested/resolved model, warm/cold parent state, fresh/cached/cache-write/output tokens **per call**, credits/estimated units, validated correctness, `failure_detected`, retry/escalation path, hidden/late defect, Scout used/changed tier, latency, client/surface, Auto-vs-fixed mode.
 
-For each representative task:
-- task class, risk, and chosen tier,
-- parent and subagent model,
-- AI credits,
-- fresh/cached/cache-write/output tokens when visible,
-- first-attempt success,
-- retry/escalation count,
-- deterministic validation result,
-- defects found later,
-- latency (secondary).
+Do not store prompt/response/source content unless explicitly required and safe.
 
-## VS Code inspection
+## Why per-call telemetry matters
 
-Useful surfaces include:
-- subagent sections/credit displays,
-- Agent Debug Logs for model turns, tools, and handoffs,
-- Cache Explorer when diagnosing cache churn,
-- Copilot usage/AI-credit views.
+Agentic tasks contain multiple model calls; long-context pricing/cache state apply to individual requests, so aggregate task tokens can misprice a route.
 
-OpenTelemetry can export agent telemetry. Keep content capture disabled by default because prompts/responses can contain source code or secrets.
+## Instrumentation
 
-Recommended settings when intentionally instrumenting a local test workspace:
+Useful surfaces can include subagent usage displays, Agent Debug Logs, Cache Explorer, usage views, and OpenTelemetry.
+
+Recommended local pattern:
 
 ```json
 {
@@ -40,12 +29,12 @@ Do not commit telemetry containing user/source content.
 
 ## Calibration loop
 
-1. Sample enough tasks to separate random failures from a pattern.
-2. Group by task shape (mechanical, multi-file implementation, debugging, architecture), not only size.
-3. Compare validated cost per success.
-4. Penalize hidden/late defects more heavily than immediately detected test failures.
-5. Run `python scripts/route_cost.py` with observed token shapes and success probabilities.
-6. Adjust routing bands in `docs/astra-routing.md`.
-7. Change always-on instructions only if the pattern is stable.
+1. gather metadata-only observations,
+2. group by task class/start model/oracle/`reached_after`,
+3. run `python scripts/calibrate_routing.py observations.jsonl`,
+4. use posterior correctness/detection estimates in `scripts/route_cost.py`,
+5. update representative fixtures,
+6. run `python scripts/policy_search.py`,
+7. change always-on policy only after repeated evidence.
 
-The `/calibrate-routing` skill packages this process.
+Track Scout's `P(changed tier | used, task class)` alongside avoided cold reads/scope mistakes. Weight late hidden defects more heavily than immediately detected failures. Keep Auto measurements separate unless resolved models are recorded.

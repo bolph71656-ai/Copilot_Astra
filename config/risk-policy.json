@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "default_class": "standard",
+  "classes": {
+    "exploratory": {"max_hidden_failure": 0.05, "max_terminal_failure": 0.1, "min_validated_correct": 0.85},
+    "standard": {"max_hidden_failure": 0.01, "max_terminal_failure": 0.05, "min_validated_correct": 0.94},
+    "high": {"max_hidden_failure": 0.005, "max_terminal_failure": 0.03, "min_validated_correct": 0.97},
+    "critical": {"max_hidden_failure": 0.001, "max_terminal_failure": 0.01, "min_validated_correct": 0.99}
+  },
+  "notes": [
+    "These are engineering policy budgets, not measured model capabilities.",
+    "Security, payment, destructive migration, privacy, and irreversible data-loss work should normally use high or critical."
+  ]
+}

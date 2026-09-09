@@ -1,6 +1,6 @@
 # Copilot feature decisions
 
-The system deliberately uses Copilot customization features that improve expected cost or correctness without permanently inflating context.
+The system deliberately uses Copilot customization features that improve expected cost or correctness without permanently inflating context. The repository is optimized for VS Code Copilot subagent orchestration and local validation.
 
 ## Used
 
@@ -15,15 +15,27 @@ Use one profile per role + model tier instead of a generic worker plus runtime m
 - `Debug Sol`
 - `Verify Luna` / `Verify Terra` / `Verify Sol`
 
-This makes normal routing explicit and inspectable: the parent selects a profile whose model is pinned in frontmatter.
+Every profile explicitly targets `vscode`. The parent pins GPT-6 Astra; every specialist pins its intended Luna/Terra/Sol model.
 
-### Isolated subagents
+### Isolated and protected subagents
 
 Subagents receive focused context rather than the parent transcript. The Astra parent keeps global intent warm while workers consume only the context needed for one bounded task.
 
-### Exact allowlist and structural no-nesting
+The coordinator explicitly allowlists the physical specialists. Every specialist sets `agents: []`, lacks the `agent` tool, sets `user-invocable: false`, and sets `disable-model-invocation: true`. This prevents recursive delegation and reduces unintended invocation outside the router.
 
-The coordinator lists exactly which physical specialists it may invoke. Every specialist sets `agents: []` and lacks the `agent` tool, preventing recursive cost explosions even before client runtime limits are considered.
+### Transition-aware empirical routing
+
+Model quality is conditioned on how the model was reached. The router does not assume `P(Sol correct | direct) = P(Sol correct | Luna already failed)`.
+
+Seed priors live in `config/routing-priors.json`. Metadata-only observations can generate the local, uncommitted overlay `config/routing-priors.local.json`, which `route_cost.py` consumes automatically.
+
+Astra is final authority but is not modeled as infallible. Risk policy independently constrains hidden accepted failure, detected unresolved terminal failure, and minimum validated-correct probability.
+
+### Human/device validation as a second oracle
+
+Required human or real-device validation is not automatically success, failure, or permission to choose a cheaper worker. The router models automatic detection, conditional human detection, manual setup/retest cost, and validation latency.
+
+`NEEDS_HUMAN_VALIDATION` and environment/device `BLOCKED` states stay outside model correctness posteriors until the outcome and attribution are resolved.
 
 ### Path-specific instructions
 
@@ -33,33 +45,31 @@ The coordinator lists exactly which physical specialists it may invoke. Every sp
 
 `/calibrate-routing` loads on demand. Skills are preferred for occasional calibration because they progressively load context instead of enlarging every request.
 
-### Deterministic CI guardrails
+### Local deterministic guardrails
 
-This repository validates the physical matrix, model pinning, tool authority, no-legacy-profile rule, instruction-size budget, calculator, and tests in CI. Consuming repositories should add their real lint/test/schema/security commands where deterministic validation is cheap and stable.
+This repository intentionally does **not** use GitHub Actions. `python scripts/validate_all.py` is the canonical local acceptance command. It rejects GitHub Actions workflow files, validates the physical matrix and VS Code target, validates pricing provenance/seed priors/risk policy/fixtures/design records, runs all unit tests, and runs offline routing-policy regression.
+
+Consuming repositories should add their real lint/test/schema/security commands where deterministic validation is cheap and stable.
 
 ## Client-specific model controls
 
-### Supported IDE custom agents
+### VS Code custom agents
 
-Where the client honors custom-agent `model`, use the fixed profile directly. Avoid changing Astra parent model/reasoning/context/tools mid-task merely to save credits because that defeats the warm-parent strategy.
+The repository agent profiles explicitly set `target: vscode`. Use `Astra Orchestrator`; it dispatches exact profiles such as `Execute Luna`, `Execute Terra`, and `Execute Sol`.
+
+Keep the parent model/configuration stable during a task when warm context remains useful. Avoid changing Astra model, reasoning, context tier, or tool set merely to save credits because those changes can defeat the warm-parent/cache strategy.
 
 ### Copilot CLI
 
-CLI supports per-agent subagent configuration. Useful optional controls include:
+CLI supports its own per-agent subagent configuration. Useful optional controls include `subagents.agents.<name>.model`, `effortLevel`, `contextTier`, `subagents.maxConcurrency`, and `subagents.maxDepth`.
 
-- `subagents.agents.<name>.model`
-- `subagents.agents.<name>.effortLevel`
-- `subagents.agents.<name>.contextTier`
-- `subagents.maxConcurrency`
-- `subagents.maxDepth`
+For exact calibrated routing, record requested and resolved models and avoid assuming VS Code profile semantics transfer unchanged to CLI. Use a non-Auto parent and/or per-agent CLI configuration when exact tier attribution matters.
 
-For exact calibrated routing, avoid an outer session using server-selected `Auto`, because CLI subagents can inherit the resolved session model instead of the profile model. Use a non-Auto parent and/or per-agent configuration when exact model attribution matters.
-
-Keep `contextTier` at the normal/default tier unless the subtask genuinely needs a long context. Do not increase `effortLevel` by default: first increase capability only when task ambiguity/risk justifies it. A practical runtime guardrail is concurrency near the repository fan-out policy (3) and depth 1; structural no-recursion remains the primary defense.
+Keep `contextTier` normal/default unless a subtask genuinely needs long context. Do not raise reasoning effort by default. Repository structural no-recursion is the primary defense; CLI depth/concurrency settings are defense-in-depth.
 
 ### Auto model selection
 
-Auto is useful for ordinary sessions when exact physical-tier attribution is not required. GitHub performs platform-managed task/reliability-aware selection, and paid plans currently receive a model-cost discount for Auto. Treat that as an alternative optimization strategy, not something to mix into experiments that measure Luna/Terra/Sol escalation economics.
+Auto is useful for ordinary sessions when exact physical-tier attribution is not required. Treat Auto as a separate optimization baseline and keep its observations separate from fixed-tier priors unless the actual resolved model is recorded.
 
 ## Deliberately not enabled globally
 
@@ -107,4 +117,4 @@ In a consuming repository with stable commands, hooks can enforce formatting/tes
 
 ### High parallelism
 
-Use more than the default fan-out only for genuinely independent shards with disjoint ownership and low result-ingestion cost. More parallel calls are not automatically cheaper or faster once parent integration overhead is included.
+Writer fan-out defaults to 1, is conditionally 2 for disjoint stable ownership, and has an exceptional cap of 3. More parallel calls are not automatically cheaper or faster once duplicate reads and parent integration cost are included.

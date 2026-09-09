@@ -1,40 +1,51 @@
-# Measure and calibrate Copilot routing
+# Measurement and calibration
 
 Measure **validated-task economics**, not target model mix.
 
-Record metadata when available: task/risk class, start model, `reached_after`, oracle strength, requested/resolved model, warm/cold parent state, fresh/cached/cache-write/output tokens **per call**, credits/estimated units, validated correctness, `failure_detected`, retry/escalation path, hidden/late defect, Scout used/changed tier, latency, client/surface, Auto-vs-fixed mode.
+## Required metadata
 
-Do not store prompt/response/source content unless explicitly required and safe.
+Record when available: task/risk class, requested/resolved model, `reached_after` (`direct`, `luna`, `luna>terra`, `sol`, ...), oracle strength, warm/cold parent state, per-call fresh/cached/cache-write/output/context tokens, credits/estimated units, validation state, `failure_attribution`, automatic failure detection, hidden/late defect, human/device validation kind/performed flag/duration/defect detection, retry/escalation path, Scout use/effect, wall-clock latency, client/surface, and Auto-vs-fixed mode.
 
-## Why per-call telemetry matters
+Prefer metadata-only collection. Do not store prompt/response/source content unless explicitly required and safe.
 
-Agentic tasks contain multiple model calls; long-context pricing/cache state apply to individual requests, so aggregate task tokens can misprice a route.
+## Strict validation states
 
-## Instrumentation
+Allowed validation states are `auto_validated`, `human_validated`, `needs_human_validation`, `failed`, and `blocked`.
 
-Useful surfaces can include subagent usage displays, Agent Debug Logs, Cache Explorer, usage views, and OpenTelemetry.
+Examples of contradictions rejected by `calibrate_routing.py`: `human_validated` without a performed human validation, `validated_correct=true` while required human validation is pending, or `human_detected_defect=true` without a performed human check.
 
-Recommended local pattern:
+Do not silently coerce contradictory records.
 
-```json
-{
-  "github.copilot.chat.otel.enabled": true,
-  "github.copilot.chat.otel.exporterType": "file",
-  "github.copilot.chat.otel.outfile": ".copilot-otel.jsonl",
-  "github.copilot.chat.otel.captureContent": false
-}
-```
+## Failure attribution
 
-Do not commit telemetry containing user/source content.
+Allowed attribution: `implementation`, `device`, `environment`, `infrastructure`, `validation-procedure`, `operator`, `unknown`.
+
+Only `implementation` failures update model correctness priors. `unknown` remains unresolved instead of defaulting to implementation.
 
 ## Calibration loop
 
-1. gather metadata-only observations,
-2. group by task class/start model/oracle/`reached_after`,
-3. run `python scripts/calibrate_routing.py observations.jsonl`,
-4. use posterior correctness/detection estimates in `scripts/route_cost.py`,
-5. update representative fixtures,
-6. run `python scripts/policy_search.py`,
+1. collect metadata-only observations,
+2. validate and group by task class/model/oracle/`reached_after`,
+3. generate a local overlay:
+
+```bash
+python scripts/calibrate_routing.py observations.jsonl \
+  --routing-priors-out config/routing-priors.local.json
+```
+
+4. run route experiments with `scripts/route_cost.py`,
+5. update representative fixtures only when policy expectations intentionally change,
+6. run `python scripts/validate_all.py`,
 7. change always-on policy only after repeated evidence.
 
-Track Scout's `P(changed tier | used, task class)` alongside avoided cold reads/scope mistakes. Weight late hidden defects more heavily than immediately detected failures. Keep Auto measurements separate unless resolved models are recorded.
+## Human oracle calibration
+
+Human/device defect detection is estimated separately from model correctness. A human pass with no known underlying defect does not prove detection power; informative cases are defects caught by the human procedure or defects discovered later after a human pass.
+
+## Scout value
+
+Track more than `P(changed tier | Scout used)`. Where feasible estimate avoided rework + avoided parent cold reads + avoided wrong-tier cost - Scout execution cost - parent ingestion cost.
+
+## Privacy
+
+Keep content capture off by default. Ignore/local-only files such as observations and `config/routing-priors.local.json` must not be committed.

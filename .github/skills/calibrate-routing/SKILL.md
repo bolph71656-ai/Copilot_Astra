@@ -1,29 +1,41 @@
 ---
 name: calibrate-routing
-description: Calibrate Astra/Luna/Terra/Sol routing from observed Copilot cost, per-call token/cache data, correctness, automatic and human/device oracle strength, hidden defects, Scout value, retries, escalation, and latency.
-argument-hint: "[metadata-only observations or measurement summary]"
+description: Calibrate transition-aware Astra/Luna/Terra/Sol routing from metadata-only observations, including path-conditioned model correctness, automatic/human oracle strength, attribution, retries, Scout value, and latency.
+argument-hint: "[metadata-only observations]"
 user-invocable: true
 disable-model-invocation: true
 ---
 
 # Calibrate routing
 
-Tune **risk-adjusted validated-task economics**, not Luna percentage.
+Tune **risk-adjusted validated-task economics**, not model usage percentages.
 
-Collect task/risk class, starting/resolved model, `reached_after`, automatic oracle strength, per-call token/cache counts, credits/units, validated correctness, detected vs hidden failures, retry/escalation, Scout use/change, latency, and Auto-vs-fixed mode. Keep source/prompt/response content out unless explicitly needed and safe.
+Record task/risk class, model, exact `reached_after` path, oracle strength, per-call usage, validation state, failure attribution, automatic/human detection, hidden defects, retry/escalation, Scout use, latency, and Auto-vs-fixed mode.
 
-For human/device-required work also record:
-- `validation_state`: `needs_human_validation`, `human_validated`, `failed`, or `blocked`
-- `human_validation_required` / `human_validation_performed`
-- `human_validation_kind`
-- `human_validation_seconds`
-- `human_detected_defect`
-- `failure_attribution`
+Strict rules:
+- pending human validation is not failure,
+- blocked is not model failure,
+- device/environment/infrastructure/procedure/operator failures do not update model correctness,
+- unknown attribution remains unassigned,
+- contradictory human-validation records are rejected,
+- Astra is calibrated like every other model.
 
-Do **not** count pending or blocked human validation as model failure. Do not penalize a model for device/environment/infrastructure/procedure/operator failures. Unknown human failures remain unassigned until evidence resolves attribution.
+Generate a machine-readable local overlay:
 
-Run `python scripts/calibrate_routing.py observations.jsonl`. The tool uses Beta posteriors, keeps direct starts separate from stages reached after prior evidence, and calibrates human/device defect detection separately from model correctness.
+```bash
+python scripts/calibrate_routing.py observations.jsonl \
+  --routing-priors-out config/routing-priors.local.json
+```
 
-Diagnose repeated patterns as `right-sized`, `under-routed`, `over-routed`, `weak-oracle`, `expensive-human-retest`, `insufficient-information`, or `authority-task`.
+Then use `scripts/route_cost.py`; it loads the seed priors plus the local overlay automatically.
 
-Before changing always-on policy: update priors, test economics with `scripts/route_cost.py`, update fixtures, run `scripts/policy_search.py`, then change prose. Do not mix Auto/fixed measurements unless resolved model is recorded.
+Direct and post-failure priors remain separate. Do not assume a model has the same success probability after lower-tier failures.
+
+Before changing always-on policy:
+1. update observations,
+2. regenerate priors,
+3. inspect candidate economics,
+4. update fixtures only for intentional policy changes,
+5. run `python scripts/validate_all.py`.
+
+Do not mix Auto/fixed measurements unless the resolved model is recorded.

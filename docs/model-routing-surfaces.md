@@ -1,35 +1,49 @@
 # Physical model routing across Copilot surfaces
 
-The repository uses separate physical agent profiles because exact role+tier files are more robust than a generic worker plus runtime model override. Client behavior can still change the effective model.
+The repository uses separate physical agent profiles because exact role+tier files are more auditable than a generic worker plus runtime model override. Exact runtime behavior remains client-specific.
 
-## Supported IDE custom agents
+## Repository source of truth: VS Code
 
-GitHub documents the `model` property for custom agents in supported IDEs such as VS Code, JetBrains IDEs, Eclipse, and Xcode. In these environments, select `Astra Orchestrator`; it dispatches exact profiles such as `Execute Luna`, `Execute Terra`, and `Execute Sol`.
+Every `.github/agents/*.agent.md` profile explicitly sets `target: vscode`.
 
-Keep the parent model/configuration stable during a task to preserve context/cache economics.
+This repository therefore targets VS Code Copilot subagent orchestration as its calibrated source-of-truth surface. In that surface the design relies on fixed `model`, explicit `agents` allowlist on Astra, `disable-model-invocation: true` on protected specialists, restricted tool sets, and `agents: []` with no `agent` tool on specialists.
+
+Leaving `target` implicit would suggest portability that the complete orchestration contract does not guarantee.
+
+## VS Code custom agents
+
+Select `Astra Orchestrator`; it dispatches exact profiles such as `Execute Luna`, `Execute Terra`, and `Execute Sol`.
+
+Keep the Astra parent model/configuration stable during a task while warm context remains useful. Do not switch the parent model/reasoning/context/tools merely to save credits if doing so destroys useful cache/context continuity.
+
+## Protected subagents
+
+Specialists are hidden from direct user invocation and protected from general model invocation. Astra explicitly names the specialists it may invoke. This makes the physical routing matrix inspectable and limits accidental bypass of the router.
 
 ## Copilot CLI
 
-CLI custom agents support a `model` field. Important exception: when the outer session uses server-selected `Auto`, subagents inherit the resolved session model regardless of the profile model. Therefore:
+CLI custom agents and subagents have their own runtime controls. Do not assume this repository's VS Code `target` files enforce identical exact-tier behavior in CLI.
 
-- use a non-Auto parent when measuring exact Luna/Terra/Sol routing;
-- or configure per-agent settings under `subagents.agents` using the exact physical agent names;
-- use `/subagents` to inspect/configure subagent settings interactively when appropriate;
-- set `subagents.maxConcurrency` near the repository fan-out policy (3) when the plan honors it;
-- `subagents.maxDepth` can be set to 1 as defense-in-depth, although repository subagents already lack the `agent` tool and set `agents: []`.
+For calibrated CLI experiments: record requested and resolved model, keep Auto runs separate, configure per-agent model/effort/context controls explicitly where supported, use `/subagents` or equivalent inspection controls when appropriate, use depth/concurrency limits only as defense-in-depth, and compare validated economics rather than nominal model labels.
 
-Do not add a repository-wide CLI config blindly: model availability, policies, effort levels, and context tiers are account/client specific.
+A practical concurrency ceiling should remain consistent with repository policy: writer fan-out 1 by default, 2 conditionally, exceptional maximum 3.
 
 ## Auto model selection
 
-Auto is useful for normal Copilot sessions: GitHub performs task-aware/reliability-aware model selection, and paid plans currently receive a model-cost discount for Auto. That is a different optimization strategy from this repository's calibrated fixed-tier experiment.
+Auto is useful for normal Copilot sessions when platform-managed task/reliability-aware selection is preferred over exact model attribution. It is a different optimization strategy from this repository's fixed-profile empirical routing.
 
-Use Auto when you value platform-managed selection more than exact model attribution. Use the Astra physical-profile workflow when you need deterministic role/tier intent, stable parent context, and measurable escalation economics.
+Do not mix Auto runs into Luna/Terra/Sol priors unless the actual resolved model is known.
 
-## Cloud agent / GitHub.com
+## GitHub.com / cloud agent
 
-Agent-profile properties are not identical across every surface. Treat the fixed model names as routing intent unless the active client explicitly honors them. Role boundaries, tool restrictions, compact handoffs, non-recursion, and monotonic escalation still improve efficiency even when exact model pinning is unavailable.
+Custom-agent properties are not identical across surfaces. The repository does not claim that the full VS Code coordinator/subagent contract is portable to GitHub.com cloud agents. If a consuming workflow targets that surface, revalidate frontmatter semantics and tool/model behavior rather than treating these files as enforcement.
 
-## Model availability
+## Model availability and pricing
 
-Model names and availability can change with plan, policy, region, preview/GA status, and client version. If a qualified `Model Name (copilot)` value is rejected, replace it with the exact model identifier exposed by that client's selector/autocomplete and update `scripts/validate_config.py` consistently.
+Model names, availability, long-context thresholds, and prices can change with plan, policy, region, preview/GA status, and client version.
+
+`config/pricing.json` stores a dated official-source URL and check date. Revalidate it before financial reporting or after model/pricing changes.
+
+## Revalidation triggers
+
+Recheck this document when GitHub/VS Code changes `target`, `agents`, fixed `model`, `disable-model-invocation`, subagent inheritance, CLI model resolution, Auto behavior, or model availability/pricing.

@@ -1,6 +1,6 @@
 ---
 name: Luna Test
-ndescription: Low-cost validation subagent for test generation, command execution, failure classification, and bounded repair loops delegated by Astra.
+description: Low-cost validation subagent for test generation, command execution, failure classification, and bounded repair loops delegated by Astra.
 model: Luna
 tools: ["read", "search", "edit", "execute"]
 user-invocable: false

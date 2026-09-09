@@ -1,6 +1,6 @@
 # Cost-aware Astra multi-model routing
 
-This policy optimizes expected AI-credit cost per validated successful task while preserving GPT-6 Astra for long-horizon intent, architecture, integration, and final authority.
+This policy optimizes **expected AI-credit cost per validated successful task**, not model price per call and not Luna usage rate. GPT-6 Astra remains the warm parent for long-horizon intent, architecture, integration, and final authority.
 
 > Pricing is volatile. Astra/Luna values are this repository's working assumptions; Terra/Sol must be rechecked against the current Copilot plan/promotions before financial reporting. The calculator is a routing estimator, not a billing API.
 
@@ -37,38 +37,126 @@ Units per 1M tokens (`100 units = $1`):
 | Semantic verification | Verify Terra |
 | Deep high-risk verification | Verify Sol |
 
-The matrix is physical: each profile pins one model. The parent chooses the profile instead of normally overriding a generic worker's model.
+The matrix is physical: each profile pins one model. The parent chooses a profile instead of normally overriding a generic worker's model.
 
-## Cheap-first economics
+## Start-tier optimization: do not default to Luna
 
-For a detected two-stage failure:
+The parent should choose the **lowest tier with sufficiently high expected success and verifiability**. Luna is the default only for low-difficulty shapes, not for every delegated task.
 
-`E[C_cheap_first] = C_cheap + (1 - p_success_cheap) * C_expensive`
+For a lower tier `L` followed by a higher tier `H`, the lower-first path has approximate expected cost:
 
-Cheap-first beats immediate expensive execution when `p_success_cheap > C_cheap / C_expensive`, but this rule is invalid for silent failures unless validation/rework/defect cost is included.
+`E[L->H] = C_L + (1-p_L) * (failure_penalty + handoff_LH + C_H)`
 
-A practical ladder is:
+Skip `L` and start directly at `H` when:
 
-`E = C1 + (1-p1)*(failure_penalty1 + handoff12 + C2 + (1-p2)*(...))`
+`E[L->H] >= C_H`
 
-Start Terra/Sol directly when weak validation or silent-failure cost makes the cheap-first expected value worse.
+The familiar zero-penalty threshold `p_L > C_L / C_H` is only a simplified special case. Real routing should include:
+- validation/rework after a failed attempt,
+- escalation handoff,
+- duplicated reads or edits,
+- silent-failure risk,
+- parent ingestion/integration cost.
 
-## Astra direct versus delegation
+The calculator now evaluates **every starting suffix** of the configured ladder and reports the lowest expected cost per successful completion. This makes `Terra->Sol->Astra`, `Sol->Astra`, or direct Astra first-class options rather than treating Luna as mandatory.
 
-Delegation includes Astra dispatch + worker cost + result ingestion/integration + expected validation/retry/escalation. Keep tiny warm edits in Astra when that fixed overhead exceeds direct work.
+Example:
 
-Astra output is especially expensive relative to Luna. With the working default prices, the output-cost difference is 4.88 units per 1K tokens. Under an illustrative 9-unit handoff/integration overhead, output savings alone cover the overhead at about 1.84K generated tokens; worker input/failure cost still matters.
+```bash
+python scripts/route_cost.py \
+  --fresh-input 12000 \
+  --output 2500 \
+  --ladder luna:0.25,terra:0.92,sol:0.99,astra:1 \
+  --dispatch-units 0.5 \
+  --handoff-units 0.5 \
+  --failure-penalty 2
+```
 
-Cold-context delegation often becomes attractive around the order of 10K tokens, with an approximate 6K-20K gray band depending on handoff quality/retry risk. Warm cached read-heavy work can remain cheaper in Astra far longer.
+Read `recommended start` as an estimator outcome for the supplied probabilities, not as an automatic billing oracle.
 
-## Escalation
+## Four routing gates
+
+Use a small parent classification pass before execution.
+
+### 1. Authority gate
+
+Keep in Astra:
+- architecture and decomposition that defines public/internal contracts,
+- security/privacy authority,
+- irreversible migrations/product/data decisions,
+- integration and model disagreement,
+- final acceptance.
+
+A tiny warm-context edit can also stay in Astra when delegation overhead exceeds the work.
+
+### 2. Information gate
+
+Use `Scout Luna` only when **missing repository facts could change the execution tier**.
+
+Examples:
+- affected-file count or coupling is unknown,
+- call graph/ownership boundary is unclear,
+- test surface is unknown,
+- parent would otherwise need broad cold reads merely to classify.
+
+After Scout returns, reclassify once and dispatch directly to the correct Execute/Debug profile.
+
+Do **not** use Scout when the task shape is already obvious from warm context or the user request. Scout is information acquisition, not a compulsory preflight.
+
+### 3. Execution gate
+
+Start **Execute Luna** when:
+- scope is explicit,
+- reasoning depth is shallow,
+- mechanical/repetitive work dominates,
+- deterministic validation is strong,
+- failure is cheaply detectable.
+
+Start **Execute Terra** when:
+- several coupled files or local APIs must be reasoned about,
+- moderate ambiguity exists,
+- Luna rework is likely enough to erase its price advantage,
+- implementation is ordinary but not mechanical.
+
+Start **Execute Sol** or **Debug Sol** when:
+- root cause is genuinely unclear,
+- concurrency/performance/migration/invariant reasoning dominates,
+- several contracts interact,
+- lower-tier silent failure would be expensive,
+- validation is weak or semantic correctness is subtle.
+
+### 4. Verification gate
+
+Choose verification separately from execution:
+- `Verify Luna` for deterministic test/lint/type/schema/build evidence,
+- `Verify Terra` for semantic regression/contract review,
+- `Verify Sol` for subtle high-risk correctness.
+
+A Sol implementation can still use Luna verification when commands are decisive. A Luna implementation can require Terra/Sol verification when tests cannot establish semantics.
+
+## Delegation economics
+
+Delegation includes:
+
+`Astra dispatch + worker cost + result ingestion/integration + validation + expected retry/escalation`
+
+This means two different effects coexist:
+
+- **Output-heavy/cold tasks:** cheap worker execution becomes attractive quickly.
+- **Warm read-heavy/tiny tasks:** Astra can remain cheaper because cached context and zero handoff dominate.
+
+With the working default prices, Astra output versus Luna differs by 4.88 units per 1K output tokens. Under an illustrative 9-unit fixed handoff/integration overhead, output savings alone cover that overhead at about 1.84K generated tokens. Worker input/failure cost still matters.
+
+Cold-context delegation often becomes attractive around the order of 10K tokens, with an approximate 6K-20K gray band depending on handoff quality and retry risk. Warm cached read-heavy work can remain cheaper in Astra far longer.
+
+## Escalation without restart
 
 - One obvious local/mechanical Luna failure: at most one short Luna correction.
 - Luna conceptual/repeated/weakly-verifiable failure: matching Terra profile.
 - Terra unresolved/reasoning-heavy task: matching Sol profile.
 - Sol architecture/security/contract ambiguity or model disagreement: Astra.
 
-Do not restart the full task on escalation; preserve evidence and transfer only the delta/root cause.
+Preserve successful discovery, failed hypotheses, validation evidence, and the smallest root-cause delta. Do not restart the full task or resend the parent transcript.
 
 ## Parallelism and context
 
@@ -80,14 +168,28 @@ Do not restart the full task on escalation; preserve evidence and transfer only 
 - Keep Astra parent model/reasoning/context/tools/MCP stable during the task.
 - Split natural modules before long-context pricing; extended context/high reasoning are exceptions.
 
-## Verification
+## Surface caveat and Auto
 
-Use `Verify Luna` for reproducible commands first. Pay for `Verify Terra` only when semantic reasoning is needed and `Verify Sol` when subtle high-risk correctness remains. For exceptional risk, a different-provider read-only review can reduce correlated blind spots if available.
+Physical files reduce runtime override dependence, but exact model semantics remain client-specific. Copilot CLI can be configured per-agent for model, effort level, and context tier; an outer Auto session can change exact attribution.
 
-## Surface caveat
+For fixed-tier calibration, label or exclude runs where the client did not honor the intended profile model. For ordinary sessions where exact attribution is unnecessary, GitHub Auto is a legitimate separate optimization mode and should be measured separately rather than mixed into Luna/Terra/Sol calibration.
 
-Physical files reduce override dependence, but Copilot CLI `Auto` can still cause subagents to inherit the resolved session model. See `docs/model-routing-surfaces.md` and measure exact routing only in a surface/configuration that honors the fixed tier.
+See `docs/model-routing-surfaces.md`.
 
-## Calibrate
+## Calibrate from actual misroutes
 
-Track validated cost/task, first-pass success by task class/model, retries/escalations, hidden defects, fresh-vs-cached context, and output volume. Use `/calibrate-routing` and change thresholds only when repeated data supports it.
+Track more than average credits:
+
+- selected starting profile,
+- task class and risk,
+- whether Scout changed the selected tier,
+- first-pass success,
+- under-routing: started too low and escalated/reworked,
+- over-routing: higher tier succeeded but a lower validated tier likely would have sufficed,
+- validation strength,
+- hidden/late defects,
+- fresh-vs-cached context,
+- output volume,
+- total validated cost/task.
+
+Use `/calibrate-routing` to tune broad class-level priors. Do not fabricate precise probabilities for a one-off task.

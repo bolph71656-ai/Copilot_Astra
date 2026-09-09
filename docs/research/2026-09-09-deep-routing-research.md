@@ -148,6 +148,12 @@ Fewer files, but weaker auditability and more surface/runtime ambiguity. Retain 
 - Cross-model verification is not automatically independent.
 - More parallel agents do not imply lower cost.
 
+## Operational validation decision
+
+The repository owner requires **no GitHub Actions**. This is a project operating constraint, not a product-research conclusion. The repository therefore uses `python scripts/validate_all.py` as its local acceptance contract. That runner also rejects files under `.github/workflows/` so the constraint cannot silently regress.
+
+Rationale and tradeoffs are recorded separately in `docs/adr/0002-local-validation-no-github-actions.md` and `docs/local-validation.md`.
+
 ## Revalidation checklist
 
-Repeat research when supported models, pricing, long-context thresholds, Auto behavior/discounts, custom-agent semantics, subagent inheritance, CLI controls, cache behavior, billing, or local calibration evidence changes materially.
+Repeat research when supported models, pricing, long-context thresholds, Auto behavior/discounts, custom-agent semantics, subagent inheritance, CLI controls, cache behavior, billing, or local calibration evidence changes materially. Reconsider the local-validation operating decision only through an explicit superseding ADR.

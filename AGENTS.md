@@ -15,9 +15,10 @@ Rules:
 10. Search/read narrowly; never copy parent transcript into a worker.
 11. Security/privacy policy, irreversible decisions, public contracts, architecture, disagreement, and final acceptance return to Astra.
 12. Keep Auto runs separate from fixed-tier calibration unless resolved model is recorded.
+13. Repository validation is local-only. Do not add GitHub Actions workflows. Before final acceptance of repository changes, run `python scripts/validate_all.py` successfully.
 
 Parent packet: `GOAL`, `SCOPE`, `KNOWN`, `CONSTRAINTS`, `ACCEPTANCE`, `VALIDATION`, `STOP`.
 
 Worker result: `STATUS`, `SUMMARY` (<= 6 bullets), `CHANGED`, `VALIDATION`, `RISKS`, `NEXT`.
 
-Research/design rationale: `docs/research/2026-09-09-deep-routing-research.md` and `docs/adr/0001-risk-aware-routing.md`.
+Research/design rationale: `docs/research/2026-09-09-deep-routing-research.md`, `docs/adr/0001-risk-aware-routing.md`, and `docs/adr/0002-local-validation-no-github-actions.md`.

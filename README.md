@@ -48,23 +48,33 @@ python scripts/route_cost.py \
 
 Each ladder entry is `model:p_correct:detection_rate`.
 
-## Calibration and policy regression
+## Calibration
 
 ```bash
 python scripts/calibrate_routing.py observations.jsonl
 python scripts/policy_search.py
-python scripts/validate_config.py
-python -m unittest discover -s tests -v
 ```
 
 Keep Auto-selected runs separate unless resolved model is known.
 
+## Local validation — no GitHub Actions
+
+This repository intentionally contains **no GitHub Actions workflows**. The canonical acceptance command is:
+
+```bash
+python scripts/validate_all.py
+```
+
+It enforces the no-Actions policy, validates agent/policy configuration, runs all unit tests, and runs the offline policy regression. See `docs/local-validation.md` and `docs/adr/0002-local-validation-no-github-actions.md`.
+
 ## Research and decisions
 
 - `docs/research/2026-09-09-deep-routing-research.md` — official findings, engineering inferences, alternatives, revalidation checklist
-- `docs/adr/0001-risk-aware-routing.md` — accepted architecture decision
+- `docs/adr/0001-risk-aware-routing.md` — accepted routing architecture decision
+- `docs/adr/0002-local-validation-no-github-actions.md` — accepted local-only validation decision
 - `docs/astra-routing.md` — routing mathematics/policy
 - `docs/observability.md` — measurement/calibration schema
 - `docs/model-routing-surfaces.md` — client/surface behavior
+- `docs/local-validation.md` — canonical repository validation contract
 
 The pricing snapshot is an engineering estimator, not authoritative billing.

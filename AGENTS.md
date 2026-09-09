@@ -1,65 +1,27 @@
-# Agent operating rules
+# Agent protocol
 
-This repository uses a parent/worker topology:
+This repository uses an Astra parent and isolated subagents.
 
-| Role | Model | Responsibility |
+| Difficulty | Default execution model | Typical work |
 | --- | --- | --- |
-| Astra Orchestrator | Astra | Intent, architecture, decomposition, integration, final acceptance |
-| Luna Scout | Luna | Read-only discovery and repository evidence |
-| Luna Worker | Luna | Scoped implementation and mechanical changes |
-| Luna Test | Luna | Repetitive validation and bounded repair loops |
+| Tiny + warm | Astra direct | 1-2 tightly coupled edits |
+| Low | Luna | search, mechanical edits, tests, boilerplate |
+| Medium | Terra | clear multi-file implementation, moderate ambiguity |
+| High | Sol | hard debugging, cross-module root cause, concurrency/performance |
+| Authority | Astra | architecture/contracts/security/integration/final acceptance |
 
-## Shared principles
+Rules:
+1. Start at the cheapest tier likely to succeed *and be verifiable*.
+2. Escalate Luna -> Terra -> Sol -> Astra; do not loop cheap failures.
+3. Subagents must be isolated and non-recursive.
+4. Parallel writers require disjoint file ownership. Default fan-out <= 3.
+5. Search/read narrowly; do not paste parent transcripts or full files across agents.
+6. Run deterministic validation before semantic review where possible.
+7. Security, privacy, irreversible migrations, public contracts, and model disagreement return to Astra.
+8. No adjacent cleanup outside acceptance criteria.
 
-1. Optimize for total successful-task cost, including handoff, retries, and re-reading—not just worker token price.
-2. Minimize duplicated context between agents.
-3. Prefer file paths, symbols, interfaces, and acceptance criteria over pasted source or transcript history.
-4. Keep worker scope small enough that a fresh context can solve it without reconstructing the full parent session.
-5. Never hide uncertainty. Return `needs-parent` when a decision exceeds delegated authority.
-6. Do not perform adjacent cleanup unless it is required for the delegated acceptance criteria.
+Parent packet: `GOAL`, `SCOPE`, `KNOWN`, `CONSTRAINTS`, `ACCEPTANCE`, `VALIDATION`, `STOP`.
 
-## Astra parent rules
+Worker result: `STATUS`, `SUMMARY` (<= 6 bullets), `CHANGED`, `VALIDATION`, `RISKS`, `NEXT`.
 
-- Keep design decisions and integration in the parent.
-- Preserve warm context; avoid unnecessary mid-session model changes.
-- Directly perform small warm-context edits when the handoff would be larger than the work.
-- Delegate large cold reads, repetitive implementation, high-volume output, and broad test loops.
-- Prefer parallel Luna tasks only when their write scopes do not overlap.
-- After a worker returns, inspect the compact summary first and re-read only integration-critical files.
-
-## Luna worker rules
-
-- Do not recursively delegate to other agents.
-- Stay within the explicit scope.
-- Search first; read narrowly; edit minimally; validate cheaply.
-- Use at most one retry for the same local root cause.
-- Escalate architecture, interface, security, or cross-cutting ambiguity.
-- Return compact structured results; never paste full files unless explicitly requested.
-
-## Handoff contract
-
-A parent-to-worker packet should contain:
-
-- `GOAL`: one outcome.
-- `SCOPE`: exact files/directories or discovery boundary.
-- `CONSTRAINTS`: invariants and interfaces that must remain stable.
-- `ACCEPTANCE`: observable success conditions.
-- `VALIDATION`: commands/checks to run when known.
-
-A worker-to-parent response should contain:
-
-- `STATUS`: done | blocked | needs-parent
-- `SUMMARY`: at most 6 bullets
-- `CHANGED`: exact paths, or none
-- `VALIDATION`: commands + outcome
-- `RISKS`: unresolved risks only
-- `NEXT`: one next action, or none
-
-## Completion criteria
-
-A task is complete only when:
-
-- implementation satisfies the delegated acceptance criteria,
-- validation has been run at the appropriate scope,
-- unresolved risks are surfaced,
-- Astra performs final integration/acceptance reasoning for cross-file or architectural work.
+A task is complete only after evidence-based validation and Astra final acceptance for cross-file, high-risk, or architectural work.

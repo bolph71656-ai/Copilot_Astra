@@ -1,115 +1,145 @@
-# Astra / Luna cost routing
+# Cost-aware Astra multi-model routing
 
-This document turns the repository's routing policy into an explicit cost model. The numbers below are the working cost assumptions for this repository and should be updated if Copilot pricing changes.
+This is the quantitative policy behind **Astra Orchestrator**. It optimizes expected AI-credit cost per validated successful task while preserving GPT-6 Astra for the decisions where its long-horizon reasoning has the highest value.
 
-## Cost assumptions
+> Pricing is volatile. The table below is the repository's working snapshot. The user-supplied Astra/Luna values are authoritative for this project; Terra/Sol should be rechecked against the current Copilot pricing page/plan before financial reporting. Use the calculator as a routing estimator, not a billing API.
 
-Cost units per 1M tokens:
+## 1. Working cost units
 
-| Model / mode | Input | Output | Cache read | Cache write |
-| --- | ---: | ---: | ---: | ---: |
-| Astra default | 1000 | 5000 | 100 | 1250 |
-| Astra long | 2000 | 7500 | 200 | 2500 |
-| Luna default | 20 | 120 | 2 | 25 |
-| Luna long | 40 | 180 | 4 | 50 |
+Units per 1M tokens (`100 units = $1`):
 
-In default mode, Astra is about 50x Luna for input/cache traffic and about 41.7x Luna for output. Long mode preserves roughly the same ratios while increasing absolute cost.
+| Model | Tier | Fresh input | Cached input | Cache write | Output | Long threshold |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Luna | default | 20 | 2 | 25 | 120 | <= 200K |
+| Luna | long | 40 | 4 | 50 | 180 | > 200K |
+| Terra | default | 200 | 20 | 250 | 1200 | <= 272K |
+| Terra | long | 400 | 40 | 500 | 1800 | > 272K |
+| Sol | default | 400 | 40 | 500 | 2000 | <= 272K |
+| Sol | long | 800 | 80 | 1000 | 3000 | > 272K |
+| Astra | default | 1000 | 100 | 1250 | 5000 | <= 272K |
+| Astra | long | 2000 | 200 | 2500 | 7500 | > 272K |
 
-## Direct Astra cost
-
-For token counts expressed in millions:
-
-```text
-C_Astra = 1000*I + 5000*O + 100*R + 1250*W
-```
-
-Where:
-
-- `I` = fresh input,
-- `O` = output,
-- `R` = cache-read tokens,
-- `W` = cache-write tokens.
-
-For long mode, substitute the long-mode prices from the table.
-
-## Delegated cost
-
-A practical expected-cost model is:
+For each model:
 
 ```text
-E[C_delegate] = H_Astra + C_Luna + p_retry*C_retry + p_fail*C_escalation
+C = (fresh*r_fresh + cached*r_cached + write*r_write + output*r_output) / 1,000,000
 ```
 
-`H_Astra` is the parent cost of dispatching the task, ingesting the compact result, and integrating it. This is why delegating every tiny edit is not optimal even when Luna's per-token price is much lower.
+## 2. Capability ladder
 
-Delegate when:
-
-```text
-C_Astra_direct_saved > H_Astra + C_Luna + expected_failure_overhead
-```
-
-## Useful break-even intuition
-
-### Output-heavy work
-
-Astra default output costs 5000 units/1M tokens versus Luna at 120. The difference is 4880 units/1M, or about 4.88 units per 1k output tokens.
-
-If a typical handoff/integration costs about 9 units, output savings alone cover that overhead at roughly:
-
-```text
-9 / 4.88 ~= 1.84k output tokens
-```
-
-Therefore, tasks expected to generate several thousand tokens of code are strong Luna candidates even when Astra already has warm input context.
-
-### Cold-context work
-
-Under a typical compact-handoff assumption, cold-context delegation tends to break even around the order of 10k tokens. Efficient handoffs can justify Luna nearer 6k; verbose handoffs plus retries can push the break-even above 20k.
-
-Use these as routing bands, not hard thresholds:
-
-- `< 6k`: usually keep in warm Astra unless the work is mechanical/high-output.
-- `6k-20k`: inspect cache warmth, expected output, independence, and retry risk.
-- `> 20k cold/new context`: usually delegate or split into Luna tasks.
-
-### Warm-cache read-heavy work
-
-When Astra already has the relevant context cached, its marginal read cost is much lower than fresh input. In read-dominated tasks with little output, delegation can remain more expensive until very large token volumes. Under one typical handoff assumption, the threshold can move to roughly 200k tokens.
-
-This is not a universal threshold: Astra output volume, cache misses, result-ingestion cost, and retry probability can move it substantially.
-
-## Routing matrix
-
-| Task shape | Default route | Reason |
+| Tier | Model | Default task shape |
 | --- | --- | --- |
-| Small edit in 1-2 warm files | Astra | Avoid handoff/re-ingestion overhead |
-| Architecture or interface decision | Astra | High coupling to parent intent |
-| Repository exploration | Luna Scout | Cold-read volume |
-| Mechanical refactor across files | Luna Worker | Cheap repetitive execution |
-| Boilerplate or large code generation | Luna Worker | Astra output is expensive |
-| Test generation / repeated test loops | Luna Test | Repetitive output + command cycles |
-| Final cross-module integration | Astra | Requires parent global intent |
-| Large independent modules | Parallel Luna Workers | Independent cold contexts |
+| 0 | Astra direct | Tiny edit in warm parent context |
+| 1 | Luna | Simple/repetitive/mechanical, cold discovery, boilerplate, tests |
+| 2 | Terra | General coding, several coupled files, moderate ambiguity |
+| 3 | Sol | Deep debugging, cross-module reasoning, concurrency/performance/migrations |
+| 4 | Astra | Architecture, security/privacy, contracts, irreversible choices, integration/final acceptance |
 
-## Context and cache discipline
+Risk can increase the tier even when token volume is small. Strong deterministic validation can decrease the execution tier.
 
-1. Keep Astra as the parent model for the session instead of switching models midstream.
-2. Delegate through subagents so each worker gets a scoped fresh context rather than inheriting the parent's entire transcript.
-3. Send paths/symbols/acceptance criteria instead of copied source whenever the worker can read the repository itself.
-4. Return compact structured summaries so Astra does not pay to ingest verbose worker narration.
-5. Split very large work before either model enters long-context pricing unnecessarily.
-6. Do not parallelize workers with overlapping write scopes.
+## 3. Why cheap-first can work
 
-## Retry policy
+For a two-stage ladder where a cheap failure is detected and immediately escalated:
 
-Cheap workers can become expensive when failure loops are unbounded. Use this default:
+```text
+E[C_cheap_first] = C_cheap + (1 - p_success_cheap) * C_expensive
+```
 
-- first attempt,
-- at most one targeted retry for the same local root cause,
-- then escalate to Astra or redefine the task.
+Cheap-first beats using the expensive model immediately when:
 
-For a task with non-trivial failure probability, include expected retry cost explicitly rather than treating Luna's sticker price as the total cost.
+```text
+p_success_cheap > C_cheap / C_expensive
+```
 
-## Operational target
+For the same default token mix, Luna is approximately one tenth of Terra, so Luna-first can be economically rational even at modest first-pass success rates.
 
-A useful initial target is to place roughly 70-90% of bulk work tokens in Luna while keeping 10-30% in Astra for intent, architecture, integration, warm micro-edits, and final acceptance. Measure successful-task cost and adjust; the optimal split depends on repository structure and retry rates.
+**Do not use this rule for silent failures.** Add validation/rework/defect cost:
+
+```text
+E = C1
+  + (1-p1) * (failure_penalty1 + handoff12 + C2
+  + (1-p2) * (failure_penalty2 + handoff23 + C3 ...))
+```
+
+A cheap model that produces plausible wrong code can be more expensive than starting at Terra/Sol.
+
+## 4. Astra direct versus delegation
+
+Delegation is not free:
+
+```text
+E[C_delegate] =
+  Astra_dispatch
+  + worker_cost
+  + Astra_result_ingestion/integration
+  + expected_validation/retry/escalation
+```
+
+Keep a tiny warm edit in Astra when this fixed overhead exceeds the work.
+
+### Output-heavy break-even intuition
+
+Astra output costs 5000 units/1M vs Luna 120, a difference of 4880 units/1M = 4.88 units per 1K output tokens.
+
+With an illustrative fixed handoff/integration overhead of 9 units:
+
+```text
+9 / 4.88 ~= 1.84K output tokens
+```
+
+So multi-thousand-token code generation is often worth delegating even if Astra's input context is warm. This ignores worker input, result ingestion, and failure cost, so treat it as intuition rather than a universal threshold.
+
+### Cold-read band
+
+A compact handoff can make Luna attractive around the order of 10K cold tokens; an efficient packet can move that toward ~6K, while verbose packets/retries can push it beyond ~20K. Use 6K-20K as a gray band, not a hard trigger.
+
+### Warm read-heavy work
+
+Cached Astra input is much cheaper than fresh Astra input. When output is tiny and the relevant context is already cached, continuing in Astra can beat delegation at far larger read volumes. This is why "delegate everything" is not optimal.
+
+## 5. Escalation policy
+
+Use monotonic escalation:
+
+- Luna local/mechanical failure with obvious fix: at most one short Luna correction.
+- Luna conceptual failure, uncertainty with weak tests, or repeated root cause: Terra.
+- Terra unresolved cross-module root cause: Sol.
+- Sol architecture/security/contract ambiguity or model disagreement: Astra.
+
+Do not pay for repeated failures at the same capability tier.
+
+## 6. Parallelism
+
+Parallelize isolated context, not shared mutable state.
+
+- Parallel read-only Scout/Researcher tasks are usually safe.
+- Parallel Executor tasks require disjoint paths and stable interfaces.
+- Default fan-out <= 3; higher fan-out increases parent result-ingestion and merge-conflict cost.
+- Batch tiny related operations into one packet.
+- Never recursively delegate.
+
+## 7. Context and cache
+
+- Keep the Astra parent model stable during the task.
+- Avoid changing reasoning level, context size, enabled tools, or MCP set mid-session.
+- Send paths/symbols/constraints instead of source dumps.
+- Keep subagent outputs compact.
+- Split natural modules before crossing long-context pricing thresholds.
+- Use extended 1M context only when sharding would destroy essential coupling.
+- Use high reasoning only for tasks that need it.
+
+## 8. Model diversity
+
+Independent verification can reduce correlated blind spots. For high-risk semantic changes, consider a read-only verifier on a different provider/model if available. Do not use diversity for routine deterministic checks: tests/lint/type checks are cheaper and more reproducible.
+
+## 9. Calibrate from real usage
+
+The correct target is not a fixed "90% Luna" ratio. Track:
+- validated cost per task,
+- first-pass success by task class/model,
+- retries and escalation,
+- hidden defects,
+- fresh-vs-cached context,
+- output volume.
+
+Invoke `/calibrate-routing` with a representative sample and change thresholds only when the data repeats.

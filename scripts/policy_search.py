@@ -10,16 +10,49 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
 from scripts.route_cost import Stage, route_options
 
 DEFAULT_FIXTURES = ROOT / "config" / "routing-fixtures.json"
 
 
 def evaluate_fixture(row: dict) -> dict:
-    stages = [Stage(model=s["model"], cost=float(s["cost"]), p_correct=float(s["p_correct"]), detection_rate=float(s.get("detection_rate", 1.0)), latency_seconds=float(s.get("latency_seconds", 0.0))) for s in row["stages"]]
-    options, best = route_options(stages, dispatch_units=float(row.get("dispatch_units", 0.0)), handoff_units=float(row.get("handoff_units", 0.0)), failure_penalty_units=float(row.get("failure_penalty_units", 0.0)), defect_penalty_units=float(row.get("defect_penalty_units", 0.0)), latency_weight=float(row.get("latency_weight", 0.0)), max_hidden_failure=float(row.get("max_hidden_failure", 1.0)))
+    stages = [
+        Stage(
+            model=stage["model"],
+            cost=float(stage["cost"]),
+            p_correct=float(stage["p_correct"]),
+            detection_rate=float(stage.get("detection_rate", 1.0)),
+            latency_seconds=float(stage.get("latency_seconds", 0.0)),
+            human_detection_rate=(
+                float(stage["human_detection_rate"])
+                if "human_detection_rate" in stage
+                else None
+            ),
+        )
+        for stage in row["stages"]
+    ]
+    options, best = route_options(
+        stages,
+        dispatch_units=float(row.get("dispatch_units", 0.0)),
+        handoff_units=float(row.get("handoff_units", 0.0)),
+        failure_penalty_units=float(row.get("failure_penalty_units", 0.0)),
+        defect_penalty_units=float(row.get("defect_penalty_units", 0.0)),
+        latency_weight=float(row.get("latency_weight", 0.0)),
+        max_hidden_failure=float(row.get("max_hidden_failure", 1.0)),
+        human_validation_required=bool(row.get("human_validation_required", False)),
+        human_detection_rate=float(row.get("human_detection_rate", 0.0)),
+        human_validation_units=float(row.get("human_validation_units", 0.0)),
+        human_validation_seconds=float(row.get("human_validation_seconds", 0.0)),
+    )
     path = best["path"] if best else None
-    return {"name": row["name"], "expected_path": row["expected_path"], "actual_path": path, "pass": path == row["expected_path"], "options": options}
+    return {
+        "name": row["name"],
+        "expected_path": row["expected_path"],
+        "actual_path": path,
+        "pass": path == row["expected_path"],
+        "options": options,
+    }
 
 
 def main() -> int:
@@ -35,7 +68,10 @@ def main() -> int:
         for result in results:
             marker = "PASS" if result["pass"] else "FAIL"
             actual = " -> ".join(result["actual_path"]) if result["actual_path"] else "none"
-            print(f"{marker} {result['name']}: expected={' -> '.join(result['expected_path'])}; actual={actual}")
+            print(
+                f"{marker} {result['name']}: "
+                f"expected={' -> '.join(result['expected_path'])}; actual={actual}"
+            )
     return 0 if all(result["pass"] for result in results) else 1
 
 

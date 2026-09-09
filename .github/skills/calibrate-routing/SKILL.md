@@ -1,41 +1,19 @@
 ---
 name: calibrate-routing
-description: Calibrate Astra/Luna/Terra/Sol routing from observed GitHub Copilot AI-credit usage, token/cache data, retries, escalations, validation failures, and task outcomes. Use when tuning thresholds or reviewing whether cheap-first routing is actually economical.
-argument-hint: "[usage observations, debug log summary, or task sample]"
+description: Calibrate Astra/Luna/Terra/Sol routing from observed Copilot cost, per-call token/cache data, correctness, failure-detection strength, hidden defects, Scout value, retries, escalation, and latency.
+argument-hint: "[metadata-only observations or measurement summary]"
 user-invocable: true
 disable-model-invocation: true
 ---
 
 # Calibrate routing
 
-Do not tune from intuition alone. Use observed successful-task cost.
+Tune **risk-adjusted validated-task economics**, not Luna percentage.
 
-## Collect
+Collect task/risk class, starting/resolved model, `reached_after`, oracle strength, per-call token/cache counts, credits/units, validated correctness, detected vs hidden failures, retry/escalation, Scout use/change, latency, and Auto-vs-fixed mode. Keep source/prompt/response content out unless explicitly needed and safe.
 
-For a representative task sample record:
-- task class and risk level,
-- parent model and worker model,
-- cold vs warm context,
-- approximate fresh/cached/cache-write/output tokens when available,
-- AI credits,
-- first-attempt success,
-- retries/escalations,
-- validation signal strength,
-- hidden defects found later,
-- latency only as a secondary metric.
+Run `python scripts/calibrate_routing.py observations.jsonl`. The tool uses Beta posteriors and keeps direct starts separate from stages reached after prior evidence.
 
-Use VS Code subagent credit hover, Agent Debug Logs/Cache Explorer, Copilot usage views, or OpenTelemetry when available. Do not capture prompt/response content unless explicitly required and safe.
+Diagnose repeated patterns as `right-sized`, `under-routed`, `over-routed`, `weak-oracle`, `insufficient-information`, or `authority-task`.
 
-## Analyze
-
-1. Group tasks by shape, not only by file count.
-2. Compare cost per *validated successful task*.
-3. Separate detectable failures from silent/late defects.
-4. Use `python scripts/route_cost.py` to test candidate ladders and pricing assumptions.
-5. Raise a tier when low-tier retries, weak validation, or hidden defects erase savings.
-6. Lower a tier when deterministic validation makes cheap execution reliably safe.
-7. Keep thresholds broad; avoid false precision from small samples.
-
-## Change policy
-
-Only change always-on routing rules when evidence is repeated across multiple tasks. Put experimental thresholds in `docs/astra-routing.md` first. Keep `.github/copilot-instructions.md` small.
+Before changing always-on policy: update priors, test economics with `scripts/route_cost.py`, update fixtures, run `scripts/policy_search.py`, then change prose. Do not mix Auto/fixed measurements unless resolved model is recorded.

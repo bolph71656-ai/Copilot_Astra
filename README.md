@@ -1,125 +1,80 @@
 # Copilot Astra
 
-A cost-aware GitHub Copilot orchestration system that keeps **GPT-6 Astra** as the long-horizon parent and routes isolated work through a difficulty ladder:
+Cost-aware GitHub Copilot orchestration with GPT-6 Astra as long-horizon parent when warm context is valuable and exact fixed-model subagents for isolated work.
 
-```text
-warm micro-edit -> Astra direct
-routine/mechanical -> Luna
-general multi-file -> Terra
-hard debugging/reasoning -> Sol
-architecture/integration/final acceptance -> Astra
-```
+The objective is **minimum risk-adjusted expected cost per validated correct task**. This is not Luna-first and not a mandatory adjacent cascade.
 
-The objective is not "use Luna as much as possible." It is **minimum expected AI-credit cost per validated correct task**, including handoff, retries, cache churn, and defects.
+## Core policy
 
-## Quick start
+Astra routes using authority, context warmth, task class, empirical `p(correct)`, failure-detection/oracle strength, hidden-defect cost, dispatch/rework cost, output volume, and optional latency value.
 
-1. Open the repository in a recent VS Code with GitHub Copilot.
-2. Start a new agent session with **Astra Orchestrator**.
-3. Give it the goal, constraints, and acceptance criteria. Do not manually pre-split ordinary tasks.
-4. The parent keeps architecture/global intent warm in Astra and uses focused subagents with explicit model tiers when isolation is economical.
-5. Review the final Astra acceptance summary.
+The parent selects the lowest **risk-feasible economic route**. Intermediate tiers may be skipped: `Luna -> Sol -> Astra` is valid.
 
-Example request:
+## Physical agent matrix
 
-```text
-Implement issue X. Preserve the public API. Acceptance: unit tests pass and the old compatibility case still works.
-```
+| Profile | Model | Purpose |
+| --- | --- | --- |
+| Astra Orchestrator | GPT-6 Astra | intent, architecture, integration, authority, final acceptance |
+| Scout Luna | GPT-5.6 Luna | cold repository discovery |
+| Research Luna | GPT-5.6 Luna | narrow current-doc/API lookup |
+| Research Terra | GPT-5.6 Terra | multi-source/compatibility synthesis |
+| Execute Luna | GPT-5.6 Luna | mechanical/repetitive implementation |
+| Execute Terra | GPT-5.6 Terra | coupled ordinary multi-file implementation |
+| Execute Sol | GPT-5.6 Sol | reasoning-heavy bounded implementation |
+| Debug Sol | GPT-5.6 Sol | difficult root-cause analysis/fix |
+| Verify Luna | GPT-5.6 Luna | optional isolated deterministic evidence |
+| Verify Terra | GPT-5.6 Terra | semantic regression/contract review |
+| Verify Sol | GPT-5.6 Sol | subtle high-risk correctness review |
 
-## Routing
+## Verification economics
 
-| Work | Default |
-| --- | --- |
-| Tiny edit in already-warm files | Astra direct |
-| Search, classification, boilerplate, simple refactor, tests | Luna |
-| Clear but non-trivial multi-file implementation | Terra |
-| Hard debugging, concurrency/performance, migrations, cross-module root cause | Sol |
-| Architecture, security/privacy, contracts, integration, final approval | Astra |
+Execute/Debug profiles self-validate first. `Verify Luna` is not compulsory; use it when a separate context isolates bulky output or adds distinct independent command evidence. Use Terra/Sol semantic review only when deterministic evidence cannot establish required correctness.
 
-Failures escalate monotonically **Luna -> Terra -> Sol -> Astra**. Cheap retries are bounded; plausible-but-unverified output escalates sooner.
+## Scout and parallelism
 
-## Specialists
+Scout is a value-of-information action, not compulsory preflight. Writer fan-out defaults to **1**, is conditionally **2**, and has exceptional cap **3**.
 
-- `Scout` — low-cost read-only repository discovery.
-- `Researcher` — current external docs/APIs and source evidence.
-- `Executor` — scoped implementation; Astra may invoke it with Luna, Terra, or Sol.
-- `Debugger` — Sol-first hypothesis-driven root cause analysis.
-- `Verifier` — read-only independent acceptance/regression review.
-- `Astra Orchestrator` — the only coordinator; owns architecture, model selection, merge/integration, and final acceptance.
+## Risk-aware estimator
 
-Subagents are non-recursive and receive compact packets rather than the parent transcript.
-
-## Why this shape is efficient
-
-Copilot subagents run in isolated sessions, so using a cheaper model for focused work does not require switching the parent model mid-session. The parent stays warm on Astra while workers pay only for scoped context. Always-on instructions are intentionally short; detailed economics are docs/skills loaded only when needed.
-
-The system also avoids broad MCP/tool sets, overlapping writer agents, unbounded retry loops, and unnecessary extended context/reasoning.
-
-## Client compatibility
-
-Precise subagent model routing is strongest in VS Code, where the coordinator can request a model for a subagent and custom agents can define their own model/tools. Model availability depends on Copilot plan/policy and changes over time.
-
-GitHub.com/cloud-agent custom-agent properties are not identical to VS Code. If a client does not honor the qualified `Model Name (copilot)` profile or explicit subagent model request, select Astra/Auto at the parent surface and use the role/risk rules as guidance rather than assuming exact tier enforcement.
-
-## Cost calculator
-
-Compare the same token shape across the working model prices and estimate a failure/escalation ladder:
+Pricing lives in `config/pricing.json`; long-context tiering is applied per call.
 
 ```bash
 python scripts/route_cost.py \
-  --fresh-input 10000 \
-  --cached-input 50000 \
-  --output 3000 \
-  --ladder luna:0.80,terra:0.95,sol:0.99,astra:1 \
-  --handoff-units 0.5 \
-  --failure-penalty 1
+  --fresh-input 12000 --output 2500 \
+  --ladder luna:0.70:0.99,terra:0.93:0.99,sol:0.985:0.995,astra:1:1 \
+  --dispatch-units 0.5 --handoff-units 0.5 --failure-penalty 2 \
+  --defect-penalty 200 --max-hidden-failure 0.01
 ```
 
-Machine-readable output:
+Each ladder entry is `model:p_correct:detection_rate`.
+
+## Calibration
 
 ```bash
-python scripts/route_cost.py --fresh-input 10000 --output 2000 --json
+python scripts/calibrate_routing.py observations.jsonl
+python scripts/policy_search.py
 ```
 
-The calculator is a routing estimator, not GitHub billing telemetry. Recheck promotional/plan-specific prices before financial reporting.
+Keep Auto-selected runs separate unless resolved model is known.
 
-## Validation
+## Local validation — no GitHub Actions
+
+This repository intentionally contains **no GitHub Actions workflows**. The canonical acceptance command is:
 
 ```bash
-python scripts/validate_config.py
-python -m unittest discover -s tests -v
+python scripts/validate_all.py
 ```
 
-CI runs both on pull requests and `main`.
+It enforces the no-Actions policy, validates agent/policy configuration, runs all unit tests, and runs the offline policy regression. See `docs/local-validation.md` and `docs/adr/0002-local-validation-no-github-actions.md`.
 
-## Repository map
+## Research and decisions
 
-```text
-.github/
-  agents/
-    astra-orchestrator.agent.md
-    scout.agent.md
-    researcher.agent.md
-    executor.agent.md
-    debugger.agent.md
-    verifier.agent.md
-  instructions/
-    agent-profiles.instructions.md
-  skills/
-    calibrate-routing/SKILL.md
-  workflows/
-    validate.yml
-  copilot-instructions.md
-AGENTS.md
-docs/
-  astra-routing.md
-  copilot-features.md
-  observability.md
-scripts/
-  route_cost.py
-  validate_config.py
-tests/
-  test_route_cost.py
-```
+- `docs/research/2026-09-09-deep-routing-research.md` — official findings, engineering inferences, alternatives, revalidation checklist
+- `docs/adr/0001-risk-aware-routing.md` — accepted routing architecture decision
+- `docs/adr/0002-local-validation-no-github-actions.md` — accepted local-only validation decision
+- `docs/astra-routing.md` — routing mathematics/policy
+- `docs/observability.md` — measurement/calibration schema
+- `docs/model-routing-surfaces.md` — client/surface behavior
+- `docs/local-validation.md` — canonical repository validation contract
 
-See `docs/astra-routing.md` for the quantitative model, `docs/copilot-features.md` for feature tradeoffs, and `docs/observability.md` for measurement/calibration.
+The pricing snapshot is an engineering estimator, not authoritative billing.

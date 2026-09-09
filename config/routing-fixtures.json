@@ -2,55 +2,126 @@
   {
     "name": "mechanical_strong_oracle",
     "stages": [
-      {"model":"luna","cost":1.0,"p_correct":0.96,"detection_rate":0.995},
-      {"model":"terra","cost":10.0,"p_correct":0.985,"detection_rate":0.995},
-      {"model":"sol","cost":20.0,"p_correct":0.995,"detection_rate":0.998},
-      {"model":"astra","cost":50.0,"p_correct":1.0,"detection_rate":1.0}
+      {"model": "luna", "cost": 1.0, "p_correct": 0.96, "detection_rate": 0.995},
+      {"model": "terra", "cost": 10.0, "p_correct": 0.985, "detection_rate": 0.995},
+      {"model": "sol", "cost": 20.0, "p_correct": 0.995, "detection_rate": 0.998},
+      {"model": "astra", "cost": 50.0, "p_correct": 1.0, "detection_rate": 1.0}
     ],
-    "dispatch_units":0.25,"handoff_units":0.5,"failure_penalty_units":0.5,"defect_penalty_units":50,"max_hidden_failure":0.01,
-    "expected_path":["luna","terra","sol","astra"]
+    "dispatch_units": 0.25,
+    "handoff_units": 0.5,
+    "failure_penalty_units": 0.5,
+    "defect_penalty_units": 50,
+    "max_hidden_failure": 0.01,
+    "expected_path": ["luna", "terra", "sol", "astra"]
   },
   {
     "name": "moderate_coupling_terra_direct",
     "stages": [
-      {"model":"luna","cost":1.0,"p_correct":0.2,"detection_rate":0.95},
-      {"model":"terra","cost":8.0,"p_correct":0.94,"detection_rate":0.99},
-      {"model":"sol","cost":15.0,"p_correct":0.985,"detection_rate":0.995},
-      {"model":"astra","cost":45.0,"p_correct":1.0,"detection_rate":1.0}
+      {"model": "luna", "cost": 1.0, "p_correct": 0.2, "detection_rate": 0.95},
+      {"model": "terra", "cost": 8.0, "p_correct": 0.94, "detection_rate": 0.99},
+      {"model": "sol", "cost": 15.0, "p_correct": 0.985, "detection_rate": 0.995},
+      {"model": "astra", "cost": 45.0, "p_correct": 1.0, "detection_rate": 1.0}
     ],
-    "dispatch_units":0.5,"handoff_units":0.8,"failure_penalty_units":1.5,"defect_penalty_units":100,"max_hidden_failure":0.01,
-    "expected_path":["terra","sol","astra"]
+    "dispatch_units": 0.5,
+    "handoff_units": 0.8,
+    "failure_penalty_units": 1.5,
+    "defect_penalty_units": 100,
+    "max_hidden_failure": 0.01,
+    "expected_path": ["terra", "sol", "astra"]
   },
   {
     "name": "weak_oracle_jump_to_sol",
     "stages": [
-      {"model":"luna","cost":1.0,"p_correct":0.65,"detection_rate":0.5},
-      {"model":"terra","cost":8.0,"p_correct":0.75,"detection_rate":0.75},
-      {"model":"sol","cost":14.0,"p_correct":0.97,"detection_rate":0.99},
-      {"model":"astra","cost":45.0,"p_correct":1.0,"detection_rate":1.0}
+      {"model": "luna", "cost": 1.0, "p_correct": 0.65, "detection_rate": 0.5},
+      {"model": "terra", "cost": 8.0, "p_correct": 0.75, "detection_rate": 0.75},
+      {"model": "sol", "cost": 14.0, "p_correct": 0.97, "detection_rate": 0.99},
+      {"model": "astra", "cost": 45.0, "p_correct": 1.0, "detection_rate": 1.0}
     ],
-    "dispatch_units":0.5,"handoff_units":1.0,"failure_penalty_units":3.0,"defect_penalty_units":250,"max_hidden_failure":0.01,
-    "expected_path":["sol","astra"]
+    "dispatch_units": 0.5,
+    "handoff_units": 1.0,
+    "failure_penalty_units": 3.0,
+    "defect_penalty_units": 250,
+    "max_hidden_failure": 0.01,
+    "expected_path": ["sol", "astra"]
   },
   {
     "name": "warm_micro_edit_astra_direct",
     "stages": [
-      {"model":"luna","cost":0.01,"p_correct":0.99,"detection_rate":1.0},
-      {"model":"terra","cost":0.1,"p_correct":0.999,"detection_rate":1.0},
-      {"model":"astra","cost":0.5,"p_correct":1.0,"detection_rate":1.0}
+      {"model": "luna", "cost": 0.01, "p_correct": 0.99, "detection_rate": 1.0},
+      {"model": "terra", "cost": 0.1, "p_correct": 0.999, "detection_rate": 1.0},
+      {"model": "astra", "cost": 0.5, "p_correct": 1.0, "detection_rate": 1.0}
     ],
-    "dispatch_units":1.0,
-    "expected_path":["astra"]
+    "dispatch_units": 1.0,
+    "expected_path": ["astra"]
   },
   {
     "name": "skip_terra_after_luna",
     "stages": [
-      {"model":"luna","cost":1.0,"p_correct":0.80,"detection_rate":1.0},
-      {"model":"terra","cost":18.0,"p_correct":0.85,"detection_rate":1.0},
-      {"model":"sol","cost":20.0,"p_correct":0.99,"detection_rate":1.0},
-      {"model":"astra","cost":50.0,"p_correct":1.0,"detection_rate":1.0}
+      {"model": "luna", "cost": 1.0, "p_correct": 0.8, "detection_rate": 1.0},
+      {"model": "terra", "cost": 18.0, "p_correct": 0.85, "detection_rate": 1.0},
+      {"model": "sol", "cost": 20.0, "p_correct": 0.99, "detection_rate": 1.0},
+      {"model": "astra", "cost": 50.0, "p_correct": 1.0, "detection_rate": 1.0}
     ],
-    "dispatch_units":0.2,"handoff_units":0.5,"failure_penalty_units":0.5,
-    "expected_path":["luna","sol","astra"]
+    "dispatch_units": 0.2,
+    "handoff_units": 0.5,
+    "failure_penalty_units": 0.5,
+    "expected_path": ["luna", "sol", "astra"]
+  },
+  {
+    "name": "device_visual_strong_human_oracle",
+    "stages": [
+      {"model": "luna", "cost": 1.0, "p_correct": 0.88, "detection_rate": 0.45},
+      {"model": "terra", "cost": 8.0, "p_correct": 0.97, "detection_rate": 0.85},
+      {"model": "sol", "cost": 14.0, "p_correct": 0.99, "detection_rate": 0.95},
+      {"model": "astra", "cost": 45.0, "p_correct": 1.0, "detection_rate": 1.0}
+    ],
+    "human_validation_required": true,
+    "human_detection_rate": 0.98,
+    "human_validation_units": 1.0,
+    "human_validation_seconds": 45,
+    "dispatch_units": 0.25,
+    "handoff_units": 0.5,
+    "failure_penalty_units": 0.5,
+    "defect_penalty_units": 40,
+    "max_hidden_failure": 0.01,
+    "expected_path": ["luna", "terra", "sol", "astra"]
+  },
+  {
+    "name": "device_retest_cost_skips_luna",
+    "stages": [
+      {"model": "luna", "cost": 1.0, "p_correct": 0.55, "detection_rate": 0.2},
+      {"model": "terra", "cost": 8.0, "p_correct": 0.95, "detection_rate": 0.8},
+      {"model": "sol", "cost": 14.0, "p_correct": 0.99, "detection_rate": 0.95},
+      {"model": "astra", "cost": 40.0, "p_correct": 1.0, "detection_rate": 1.0}
+    ],
+    "human_validation_required": true,
+    "human_detection_rate": 0.99,
+    "human_validation_units": 20.0,
+    "human_validation_seconds": 600,
+    "dispatch_units": 0.25,
+    "handoff_units": 0.5,
+    "failure_penalty_units": 0.5,
+    "defect_penalty_units": 100,
+    "max_hidden_failure": 0.01,
+    "expected_path": ["terra", "sol", "astra"]
+  },
+  {
+    "name": "high_risk_device_check_still_needs_sol",
+    "stages": [
+      {"model": "luna", "cost": 1.0, "p_correct": 0.8, "detection_rate": 0.25},
+      {"model": "terra", "cost": 8.0, "p_correct": 0.92, "detection_rate": 0.65},
+      {"model": "sol", "cost": 15.0, "p_correct": 0.985, "detection_rate": 0.95},
+      {"model": "astra", "cost": 50.0, "p_correct": 1.0, "detection_rate": 1.0}
+    ],
+    "human_validation_required": true,
+    "human_detection_rate": 0.6,
+    "human_validation_units": 2.0,
+    "human_validation_seconds": 120,
+    "dispatch_units": 0.5,
+    "handoff_units": 0.5,
+    "failure_penalty_units": 2.0,
+    "defect_penalty_units": 500,
+    "max_hidden_failure": 0.005,
+    "expected_path": ["sol", "astra"]
   }
 ]

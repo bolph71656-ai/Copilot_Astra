@@ -1,70 +1,82 @@
-# Risk-aware Astra multi-model routing
+# Transition-aware risk/economic routing
 
-Optimize **risk-adjusted expected AI-credit cost per validated correct task**.
+## Objective
 
-For route `π`, estimate expected cost `E[Cπ]`, validated-correct probability `Pcorrect(π)`, hidden-failure probability `Phidden(π)`, and optional latency `E[Tπ]`.
+For route `π`, evaluate model + dispatch + handoff + rework + human-validation cost, validated-correct probability, hidden accepted failure probability, detected terminal unresolved failure probability, and latency.
 
-Rank viable routes by:
+The score is:
 
-`(E[Cπ] + λ_defect * Phidden(π) + λ_latency * E[Tπ]) / Pcorrect(π)`
+```text
+(E[Cπ] + λ_defect * Phidden(π) + λ_latency * E[Tπ]) / Pcorrect(π)
+```
 
-subject to `Phidden(π) <= risk_budget`.
+A route is viable only when:
 
-## Success and detection are different
+```text
+Phidden <= max_hidden_failure
+Pterminal <= max_terminal_failure
+Pcorrect >= min_validated_correct
+```
 
-For each stage: `p = P(correct)` and `d = P(incorrect result is detected before acceptance | incorrect)`.
+Risk classes live in `config/risk-policy.json`.
 
-- correct exit: `reach * p`
-- hidden failure: `reach * (1-p) * (1-d)`
-- detected escalation: `reach * (1-p) * d`
+## Transition-aware priors
 
-Cheap execution is attractive when failures are detectable. Weak oracles can make a cheap route unsafe.
+Direct-start capability and post-failure capability are different distributions. For `Luna -> Sol -> Astra`, lookup uses `direct`, then `luna`, then `luna>sol` as `reached_after`.
 
-## Per-call pricing
+Lookup prefers exact task class + oracle strength + exact path, then exact/generic combinations with `after:any`, then wildcard seed fallback. Later prior files override same-specificity fields; partial calibrated entries can override one field while retaining seed values for missing fields.
 
-`config/pricing.json` is an engineering snapshot. Long-context thresholds apply **per model call**. Two 150K Luna calls are not one aggregated 300K long-context call.
+This prevents using `P(Sol succeeds | direct)` after lower-tier failures have selected a harder residual task set.
 
-## Routing features
+## Astra is not perfect
 
-Use authority, warm/cold context, task class, coupling/ambiguity, oracle strength, hidden-defect/blast-radius cost, output volume, dispatch/rework overhead, and latency sensitivity. Task size alone is insufficient.
+Astra is the authority boundary, not mathematical certainty. Seed priors keep Astra below 1.0 and calibration updates Astra exactly like other models. A detected Astra failure that remains unresolved is a real terminal task failure.
 
-## Scout value of information
+## Priors pipeline
 
-Use Scout only when `expected avoided misroute/rework > Scout cost + Astra ingestion`. Reclassify once after Scout.
+Cold start: `config/routing-priors.json`.
 
-## Direct start
+Local evidence overlay:
 
-- Luna: explicit/mechanical, strong deterministic oracle, cheap detectable failure.
-- Terra: ordinary coupled multi-file reasoning, moderate ambiguity.
-- Sol/Debug Sol: unclear root cause, concurrency/migration/performance/invariants, weak validation, expensive silent failure.
-- Astra: authority/integration or tiny warm edit cheaper than dispatch.
+```bash
+python scripts/calibrate_routing.py observations.jsonl \
+  --routing-priors-out config/routing-priors.local.json
+```
 
-## Intermediate tiers are optional
+Normal routing consumes both. Do not commit user/task telemetry or the local overlay.
 
-Capability escalation is monotone, but routes need not visit every tier. `Luna -> Sol -> Astra` may dominate an adjacent cascade. `scripts/route_cost.py` enumerates monotone routes ending at final authority.
+## Strict observation attribution
 
-## Retry EV
+A failed observation enters model correctness calibration only when `failure_attribution = implementation`. Pending human validation, blocked states, device/environment/infrastructure/procedure/operator failures, and unknown attribution stay outside the model posterior. Contradictory human-validation states are rejected rather than silently repaired.
 
-Retry Luna only for obvious local/mechanical failure with unchanged scope, short correction, decisive deterministic validation, and expected retry cost below escalation. Conceptual failure escalates.
+## Human/device oracle
 
-## Verification
+For an incorrect result:
 
-Execute/Debug profiles self-validate. `Verify Luna` is optional for bulky/distinct independent deterministic evidence. Use Verify Terra/Sol when residual uncertainty is semantic.
+```text
+d_total = d_auto + (1 - d_auto) * d_human
+```
 
-## Parallelism
+A human check occurs only for candidates not already rejected automatically, so cascades can create repeated manual validation cost. Metrics that can occur multiple times are named as expected event counts: `expected_auto_escaped_defect_events`, `expected_human_detected_defect_events`, and `expected_human_validation_count`. Only route exit measures are probabilities.
 
-Writer default 1; conditional 2 for disjoint modules/stable interfaces; exceptional cap 3. Overlapping contracts/files/migrations serialize.
+## Long-context pricing
 
-## Bayesian calibration
+Long-context tiering is per call. Prefer exact provider `context_tokens`; otherwise infer conservatively as `fresh_input + cached_input + cache_write`. Pricing metadata records its official source URL and check date.
 
-`scripts/calibrate_routing.py` estimates priors separately by task class, start model, `reached_after`, and oracle strength. Do not assume a model has the same success rate direct versus after earlier failure evidence.
+## Qualitative cold-start policy
 
-## Offline policy search
+Until enough calibrated evidence exists:
+- Luna: low ambiguity + strong oracle + cheap recovery,
+- Terra: normal coupled implementation,
+- Sol: weak oracle, difficult debugging, subtle invariants/concurrency/migration,
+- Astra: authority, integration, security/privacy/public contracts, high-consequence final judgment.
 
-`config/routing-fixtures.json` encodes representative scenarios. `python scripts/policy_search.py` is routing regression, not benchmark proof.
+These are priors, not quotas.
+
+## Scout VOI
+
+Scout should run only when expected avoided wrong-tier/rework/cold-read cost exceeds Scout execution + parent ingestion. `P(changed tier | Scout used)` is diagnostic, not the final value metric.
 
 ## Auto baseline
 
-GitHub Auto is a separate external router with cache-boundary and availability advantages. Compare validated cost, defects, latency, attribution, and operational complexity; do not claim superiority without evidence.
-
-Research basis: `docs/research/2026-09-09-deep-routing-research.md` and `docs/adr/0001-risk-aware-routing.md`.
+GitHub Auto is a separate platform-managed router. Keep Auto and fixed-tier observations separate unless the resolved model is recorded. Compare validated economics rather than assuming either policy is universally superior.

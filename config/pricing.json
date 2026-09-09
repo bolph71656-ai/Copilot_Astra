@@ -1,8 +1,10 @@
 {
   "schema_version": 1,
-  "as_of": "2026-09-09",
+  "as_of": "2026-09-10",
+  "source_url": "https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing",
+  "source_checked_at": "2026-09-10",
   "unit_definition": "routing units per 1,000,000 tokens; 100 units = 1 USD in this repository estimator",
-  "source_policy": "Engineering snapshot. Revalidate against current GitHub Copilot pricing before financial reporting.",
+  "source_policy": "Engineering snapshot checked against GitHub Copilot's official models-and-pricing table. Revalidate before financial reporting because rates and supported models can change.",
   "models": {
     "luna": {"default": {"fresh_input": 20, "cached_input": 2, "cache_write": 25, "output": 120}, "long": {"fresh_input": 40, "cached_input": 4, "cache_write": 50, "output": 180}, "long_threshold": 200000},
     "terra": {"default": {"fresh_input": 200, "cached_input": 20, "cache_write": 250, "output": 1200}, "long": {"fresh_input": 400, "cached_input": 40, "cache_write": 500, "output": 1800}, "long_threshold": 272000},
@@ -10,8 +12,8 @@
     "astra": {"default": {"fresh_input": 1000, "cached_input": 100, "cache_write": 1250, "output": 5000}, "long": {"fresh_input": 2000, "cached_input": 200, "cache_write": 2500, "output": 7500}, "long_threshold": 272000}
   },
   "notes": [
-    "Astra/Luna values are project assumptions supplied during design.",
-    "Terra/Sol values are working engineering assumptions and must not be presented as authoritative billing without revalidation.",
-    "Long-context tier selection is applied per model call, not to an aggregate multi-call task."
+    "Long-context threshold selection is per model call.",
+    "When provider telemetry exposes exact context_tokens, pass it explicitly. The estimator otherwise conservatively counts fresh + cached + cache-write tokens as input context.",
+    "Pricing data is operational metadata, not a guarantee of future GitHub billing."
   ]
 }

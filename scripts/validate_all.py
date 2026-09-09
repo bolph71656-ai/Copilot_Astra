@@ -1,58 +1,27 @@
 #!/usr/bin/env python3
-"""Run the complete Copilot Astra validation suite locally.
-
-This repository intentionally does not use GitHub Actions. This script is the
-single supported validation entry point and also guards against hosted workflow
-files being reintroduced accidentally.
-"""
+"""Run the complete Copilot Astra validation suite locally."""
 from __future__ import annotations
-
-import subprocess
-import sys
+import subprocess,sys
 from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1];WORKFLOWS=ROOT/'.github'/'workflows'
 
-ROOT = Path(__file__).resolve().parents[1]
-WORKFLOWS = ROOT / ".github" / "workflows"
-
-
-def ensure_no_github_actions() -> int:
-    files = []
-    if WORKFLOWS.exists():
-        files = sorted(path for path in WORKFLOWS.rglob("*") if path.is_file())
+def ensure_no_github_actions():
+    files=sorted(p for p in WORKFLOWS.rglob('*') if p.is_file()) if WORKFLOWS.exists() else []
     if files:
-        print("Validation failed: GitHub Actions workflows are intentionally disabled.")
-        for path in files:
-            print(f"- {path.relative_to(ROOT)}")
+        print('Validation failed: GitHub Actions workflows are intentionally disabled.')
+        for p in files:print(f'- {p.relative_to(ROOT)}')
         return 1
-    print("[ok] no GitHub Actions workflows")
-    return 0
+    print('[ok] no GitHub Actions workflows');return 0
 
+def run(label,args):
+    print(f'\n== {label} ==');done=subprocess.run([sys.executable,*args],cwd=ROOT,check=False)
+    if done.returncode:print(f'[fail] {label}: exit {done.returncode}');return done.returncode
+    print(f'[ok] {label}');return 0
 
-def run(label: str, args: list[str]) -> int:
-    print(f"\n== {label} ==")
-    completed = subprocess.run([sys.executable, *args], cwd=ROOT, check=False)
-    if completed.returncode:
-        print(f"[fail] {label}: exit {completed.returncode}")
-        return completed.returncode
-    print(f"[ok] {label}")
-    return 0
-
-
-def main() -> int:
-    if ensure_no_github_actions():
-        return 1
-    steps = [
-        ("agent and policy configuration", ["scripts/validate_config.py"]),
-        ("routing and calibration tests", ["-m", "unittest", "discover", "-s", "tests", "-v"]),
-        ("offline policy regression", ["scripts/policy_search.py"]),
-    ]
-    for label, args in steps:
-        code = run(label, args)
-        if code:
-            return code
-    print("\nAll local validation passed.")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+def main():
+    if ensure_no_github_actions():return 1
+    for label,args in [('agent and policy configuration',['scripts/validate_config.py']),('routing/calibration tests',['-m','unittest','discover','-s','tests','-v']),('offline policy regression',['scripts/policy_search.py'])]:
+        code=run(label,args)
+        if code:return code
+    print('\nAll local validation passed.');return 0
+if __name__=='__main__':raise SystemExit(main())

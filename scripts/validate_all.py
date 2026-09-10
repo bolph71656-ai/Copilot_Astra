@@ -27,6 +27,7 @@ def main():
     for label,args in [
         ("generated model configuration",["scripts/sync_model_config.py"]),
         ("agent and policy configuration",["scripts/validate_config.py"]),
+        ("gateway policy and economics",["scripts/validate_gateway_policy.py"]),
         ("routing/calibration tests",["-m","unittest","discover","-s","tests","-v"]),
         ("offline policy regression",["scripts/policy_search.py"]),
     ]:

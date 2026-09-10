@@ -43,6 +43,8 @@ def validate() -> list[str]:
         errors.append("gateway calibrated policy may directly allow deterministic oracle only")
     if int(calibrated.get("min_samples", 0)) < 1:
         errors.append("gateway calibrated min_samples must be positive")
+    if int(calibrated.get("min_cost_samples", 0)) < 1:
+        errors.append("gateway calibrated min_cost_samples must be positive")
     confidence_z = calibrated.get("confidence_z")
     if not isinstance(confidence_z, (int, float)) or float(confidence_z) < 1.96:
         errors.append("gateway calibrated confidence_z must be at least 1.96")

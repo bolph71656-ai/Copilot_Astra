@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +37,9 @@ def load_calibration(path: Path = LOCAL_CALIBRATION_PATH) -> dict | None:
         raise ValueError(f"{path}: unsupported gateway calibration schema")
     if not isinstance(raw.get("entries", []), list):
         raise ValueError(f"{path}: entries must be a list")
+    confidence_z = raw.get("confidence_z")
+    if not isinstance(confidence_z, (int, float)) or float(confidence_z) <= 0:
+        raise ValueError(f"{path}: positive confidence_z is required")
     return raw
 
 
@@ -64,7 +66,8 @@ def resolve_calibration(calibration: dict | None, *, task_class: str, risk_class
             matches.append((score, row))
     if not matches:
         return None
-    return max(matches, key=lambda item: item[0])[1]
+    row = max(matches, key=lambda item: item[0])[1]
+    return {**row, "_confidence_z": calibration.get("confidence_z")}
 
 
 def rollback_reasons(calibration: dict | None, policy: dict) -> list[str]:
@@ -95,6 +98,9 @@ def calibrated_entry_reasons(entry: dict | None, policy: dict) -> list[str]:
         return ["no-calibrated-evidence"]
     cfg = policy["calibrated"]
     reasons: list[str] = []
+    confidence_z = entry.get("_confidence_z")
+    if confidence_z is None or float(confidence_z) < float(cfg["confidence_z"]):
+        reasons.append("insufficient-confidence-level")
     if int(entry.get("samples", 0) or 0) < int(cfg["min_samples"]):
         reasons.append("insufficient-samples")
     false_upper = entry.get("false_downroute_upper_bound")

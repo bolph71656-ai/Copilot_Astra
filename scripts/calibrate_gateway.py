@@ -142,13 +142,22 @@ def summarize(records: list[dict], *, z: float = 1.96) -> dict:
             "oracle_strength": oracle,
             **_finalize(stats, z=z),
         })
+    direct = global_stats["samples"]
+    total = direct + escalations
+    global_summary = {
+        **_finalize(global_stats, z=z),
+        "escalations": escalations,
+        "total_requests": total,
+        "direct_completion_rate": direct / total if total else None,
+        "escalation_rate": escalations / total if total else None,
+    }
     return {
         "schema_version": 1,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source_kind": "gateway-calibration-output",
         "confidence_z": z,
         "entries": entries,
-        "global": {**_finalize(global_stats, z=z), "escalations": escalations},
+        "global": global_summary,
     }
 
 

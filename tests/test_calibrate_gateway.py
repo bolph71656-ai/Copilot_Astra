@@ -45,6 +45,7 @@ class GatewayCalibrationTests(unittest.TestCase):
         self.assertLessEqual(entry["false_downroute_upper_bound"], 0.02)
         self.assertGreaterEqual(entry["validated_correct_lower_bound"], 0.94)
         self.assertLessEqual(entry["authority_rescue_upper_bound"], 0.05)
+        self.assertEqual(entry["cost_ratio_samples"], 250)
         self.assertAlmostEqual(entry["mean_cost_ratio_vs_authority_direct"], 0.5)
 
         result = evaluate_gateway(
@@ -57,6 +58,27 @@ class GatewayCalibrationTests(unittest.TestCase):
             calibration=calibration,
         )
         self.assertEqual(result["decision"], "ALLOW_DIRECT")
+
+    def test_global_summary_reports_direct_and_escalation_rates(self):
+        calibration = summarize([
+            {
+                "gateway_action": "direct",
+                "task_class": "mechanical",
+                "risk_class": "exploratory",
+                "oracle_strength": "deterministic",
+                "final_validated_correct": True,
+            },
+            {
+                "gateway_action": "escalate",
+                "task_class": "coupled",
+                "risk_class": "standard",
+                "oracle_strength": "mixed",
+            },
+        ])
+        global_summary = calibration["global"]
+        self.assertEqual(global_summary["total_requests"], 2)
+        self.assertAlmostEqual(global_summary["direct_completion_rate"], 0.5)
+        self.assertAlmostEqual(global_summary["escalation_rate"], 0.5)
 
     def test_high_risk_false_downroute_triggers_global_pause(self):
         calibration = summarize([

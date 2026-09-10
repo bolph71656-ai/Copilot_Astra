@@ -63,6 +63,10 @@ def validate() -> list[str]:
         errors.append("gateway calibrated validated-correct lower bound is too permissive")
     if int(rollback.get("min_samples", 0)) < 1:
         errors.append("gateway rollback min_samples must be positive")
+    if int(rollback.get("min_cost_samples", 0)) < 1:
+        errors.append("gateway rollback min_cost_samples must be positive")
+    if not rollback.get("pause_on_any_high_or_critical_direct_attempt", False):
+        errors.append("gateway rollback must pause on any high/critical direct attempt")
     if not rollback.get("pause_on_any_high_or_critical_false_downroute", False):
         errors.append("gateway rollback must pause on any high/critical false down-route")
 

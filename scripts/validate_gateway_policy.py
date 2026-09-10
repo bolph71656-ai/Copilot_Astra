@@ -33,10 +33,16 @@ def validate() -> list[str]:
         errors.append("gateway bootstrap may directly allow exploratory risk only")
     if set(bootstrap.get("direct_oracle_strengths", [])) - {"deterministic"}:
         errors.append("gateway bootstrap may directly allow deterministic oracle only")
+    for key in ("require_explicit_acceptance", "require_local_bounded_surface", "require_no_human_validation"):
+        if bootstrap.get(key) is not True:
+            errors.append(f"gateway bootstrap must keep {key}=true")
     if {"high", "critical"} & set(calibrated.get("direct_risk_classes", [])):
         errors.append("gateway calibrated policy must never directly allow high/critical risk")
     if int(calibrated.get("min_samples", 0)) < 1:
         errors.append("gateway calibrated min_samples must be positive")
+    confidence_z = calibrated.get("confidence_z")
+    if not isinstance(confidence_z, (int, float)) or float(confidence_z) < 1.96:
+        errors.append("gateway calibrated confidence_z must be at least 1.96")
     for key in (
         "max_false_downroute_upper_bound",
         "min_validated_correct_lower_bound",

@@ -92,6 +92,8 @@ def calibrated_entry_reasons(entry: dict | None, policy: dict) -> list[str]:
         reasons.append("insufficient-confidence-level")
     if int(entry.get("samples", 0) or 0) < int(cfg["min_samples"]):
         reasons.append("insufficient-samples")
+    if int(entry.get("cost_ratio_samples", 0) or 0) < int(cfg["min_cost_samples"]):
+        reasons.append("insufficient-cost-samples")
     false_upper = entry.get("false_downroute_upper_bound")
     if false_upper is None or float(false_upper) > float(cfg["max_false_downroute_upper_bound"]):
         reasons.append("false-downroute-bound")
@@ -220,7 +222,9 @@ def main() -> int:
         print(result["decision"])
         if result.get("reasons"):
             print("reasons=" + ",".join(result["reasons"]))
-    return 0 if result["decision"] == "ALLOW_DIRECT" else 2
+    # ALLOW_DIRECT and an ordinary policy denial are both valid decisions.
+    # Reserve non-zero status for a malformed/unreadable policy or calibration.
+    return 2 if result.get("mode") == "policy-error" else 0
 
 
 if __name__ == "__main__":

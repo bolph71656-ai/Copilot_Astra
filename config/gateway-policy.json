@@ -21,6 +21,8 @@
   },
   "rollback": {
     "min_samples": 20,
+    "min_cost_samples": 20,
+    "pause_on_any_high_or_critical_direct_attempt": true,
     "pause_on_any_high_or_critical_false_downroute": true,
     "max_false_downroute_rate": 0.03,
     "max_authority_rescue_rate": 0.15,
@@ -29,8 +31,8 @@
   "notes": [
     "Bootstrap policy is intentionally narrow: only exploratory work with a decisive deterministic oracle may complete directly.",
     "Standard-risk direct completion requires an exact local calibrated bucket that clears conservative confidence, sample, safety, rescue, and cost-evidence bounds; seed worker priors never authorize gateway expansion.",
+    "A high/critical direct attempt is itself a policy violation and pauses gateway direct completion even when the attempted result later validates correctly.",
     "The gateway remains a semantic classifier, so this policy script is a fail-closed second check rather than proof that the task was classified correctly.",
-    "High and critical work never completes directly at the gateway.",
     "If calibration is missing, malformed, sparse, or worse than rollback thresholds, escalate to the authority parent."
   ]
 }

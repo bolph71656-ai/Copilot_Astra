@@ -24,46 +24,70 @@ Risk classes live in `config/risk-policy.json`.
 
 `Astra Gateway` is a separate admission layer in front of the authority routing system. When at least one non-authority model exists, it is generated on the **lowest active non-authority model**. In the current topology that is Luna.
 
-The gateway is not a free-form replacement for the authority parent. It is intentionally **fail-closed**:
+The gateway is not a free-form replacement for the authority parent. It is intentionally **fail-closed** and has two layers of admission:
+
+1. semantic hard gates evaluated before edits,
+2. executable policy in `scripts/gateway_policy.py`.
 
 ```text
-obvious low-risk
-+ explicit scope/acceptance
+semantic gates clear
++ explicit acceptance
 + local bounded surface
-+ decisive automatic oracle available now
-+ no authority trigger
-+ no prior substantive failure
++ decisive deterministic oracle
++ gateway_policy.py => ALLOW_DIRECT
         |
         v
-complete directly on gateway model
+direct work + decisive automatic validation
 
-anything uncertain / high-risk / weak-oracle / integration-heavy
+anything uncertain / denied / policy unavailable
         |
         v
 escalate intact to authority parent
 ```
 
-The gateway may invoke only the authority parent. It cannot directly dispatch normal workers. This prevents a cheap model from making fine-grained Terra/Sol/Astra tier decisions while still removing authority startup cost from clearly mechanical work.
+The gateway may invoke only the authority parent. It cannot directly dispatch normal workers. This prevents the cheapest model from making fine-grained Terra/Sol/Astra worker decisions while still allowing cheap completion in narrowly safe cases.
 
-Authority triggers include security/privacy/auth/payment/trust boundaries; destructive or irreversible data changes; architecture/public contracts; cross-component or subtle concurrency/distributed invariants; weak/subjective oracles; high/critical risk; long-horizon integration/final acceptance; and substantive implementation or validation failure.
+Authority triggers include security/privacy/auth/payment/trust boundaries; permission changes; destructive or irreversible data changes; architecture/public contracts; cross-component or subtle concurrency/distributed invariants; weak/subjective oracles; required human/device acceptance; high/critical risk; long-horizon integration/final acceptance; and substantive implementation or validation failure.
 
 False down-routing is treated as a more serious error than over-escalation. Any uncertainty about a direct-completion condition resolves upward.
 
 Known authority/high-risk work may bypass the gateway and invoke the authority parent directly.
 
-### Gateway economics
+### Bootstrap versus calibrated admission
 
-Gateway-first operation is beneficial only when the savings from directly completed cheap tasks exceed:
+Worker capability priors and gateway-classifier evidence are different distributions. `config/routing-priors.json` therefore never authorizes gateway expansion.
 
-- the gateway model call itself,
-- classification reads/search,
-- escalation handoff/ingestion cost,
-- any rework caused by a false down-route,
-- latency cost.
+Cold-start/bootstrap policy in `config/gateway-policy.json` currently permits direct completion only when:
 
-Therefore compare gateway-first and authority-direct using measured **task-level** cost, not gateway token price alone. Until dedicated telemetry is wired into the estimator, include measured gateway/escalation overhead in `dispatch_units` / `handoff_units` assumptions for scenario analysis.
+```text
+risk_class = exploratory
+oracle_strength = deterministic
+explicit acceptance = true
+local bounded surface = true
+no authority trigger
+no unresolved design
+no required human/device validation
+no substantive prior failure
+```
 
-The gateway's safety metrics are separate from model correctness priors. Track at least:
+`standard` direct completion is evidence-gated. It becomes eligible only for a matching task/risk/oracle bucket when local `config/gateway-calibration.local.json` clears all configured requirements, including minimum samples, minimum confidence level, false-downroute upper bound, validated-correct lower bound, authority-rescue upper bound, and cost break-even.
+
+`high` and `critical` work never completes directly at the gateway.
+
+If policy/calibration is absent, malformed, insufficient, or worse than thresholds, the decision is `ESCALATE`.
+
+### Gateway calibration
+
+Create the ignored local calibration file from metadata-only observations:
+
+```bash
+python scripts/calibrate_gateway.py observations.jsonl \
+  --out config/gateway-calibration.local.json
+```
+
+The calibration uses Wilson confidence intervals for gateway safety rates rather than trusting point estimates alone. A calibration generated at a confidence level below the policy requirement cannot unlock calibrated direct completion.
+
+Track at least:
 
 ```text
 direct_completion_rate
@@ -73,10 +97,49 @@ validated_correct_rate
 authority_rescue_rate
 mean_gateway_units
 mean_escalation_handoff_units
+mean_cost_ratio_vs_authority_direct
 end_to_end_units_per_validated_correct
 ```
 
-The primary guardrail is `false_downroute_rate`, especially for standard/high consequence work. Worker `p_correct` does not establish that the same model is a safe classifier.
+The primary safety guardrail is false down-routing. The primary economics guardrail is gateway-path cost relative to an authority-direct counterfactual.
+
+### Rollback
+
+Gateway expansion is reversible policy, not an assumption. `config/gateway-policy.json` defines global rollback conditions. Current policy immediately pauses direct completion after any observed high/critical false down-route and also pauses after configured sample floors when false-downroute, authority-rescue, or cost-regression thresholds are exceeded.
+
+This rollback check runs before bootstrap/calibrated admission so known regression can disable even otherwise eligible cheap work.
+
+### Gateway economics
+
+Gateway-first operation is beneficial only when the savings from directly completed cheap tasks exceed:
+
+- the gateway model call itself,
+- classification reads/search,
+- escalation handoff/ingestion cost,
+- duplicated context on escalation,
+- any rework caused by a false down-route,
+- latency cost.
+
+A simplified comparison is:
+
+```text
+C_gateway = C_gate
+          + q_direct * C_direct
+          + (1 - q_direct) * (C_handoff + C_authority)
+          + q_false * C_rework
+
+C_authority_direct = C_authority
+```
+
+Gateway-first is favorable only when `C_gateway < C_authority_direct`. Cheap model token price alone does not establish this.
+
+## Operational cost defaults
+
+`scripts/route_cost.py` uses `config/operational-costs.json` whenever operational cost CLI arguments are omitted. Dispatch, handoff, failure/rework, and defect penalties therefore do not silently become zero.
+
+The committed defaults are marked `source_kind: conservative-bootstrap` and `measured: false`. They are engineering assumptions for safer scenario analysis, not billing facts. Explicit CLI arguments override them, including zero for controlled experiments.
+
+Latency seconds are always reported when supplied. The committed latency economic weight remains zero until an operator assigns a meaningful local value.
 
 ## Transition-aware priors
 
@@ -90,7 +153,7 @@ This prevents using `P(Sol succeeds | direct)` after lower-tier failures have se
 
 Astra is the authority boundary, not mathematical certainty. Seed priors keep Astra below 1.0 and calibration updates Astra exactly like other models. A detected Astra failure that remains unresolved is a real terminal task failure.
 
-## Priors pipeline
+## Worker priors pipeline
 
 Cold start: `config/routing-priors.json`.
 
@@ -101,11 +164,15 @@ python scripts/calibrate_routing.py observations.jsonl \
   --routing-priors-out config/routing-priors.local.json
 ```
 
-Normal routing consumes both. Do not commit user/task telemetry or the local overlay.
+Normal worker routing consumes both. Do not commit user/task telemetry or the local overlay.
+
+Worker-routing calibration and gateway-admission calibration remain intentionally separate.
 
 ## Strict observation attribution
 
-A failed observation enters model correctness calibration only when `failure_attribution = implementation`. Pending human validation, blocked states, device/environment/infrastructure/procedure/operator failures, and unknown attribution stay outside the model posterior. Contradictory human-validation states are rejected rather than silently repaired.
+A failed worker observation enters model correctness calibration only when `failure_attribution = implementation`. Pending human validation, blocked states, device/environment/infrastructure/procedure/operator failures, and unknown attribution stay outside the model posterior. Contradictory human-validation states are rejected rather than silently repaired.
+
+Gateway false down-routing is a separate classifier outcome and must not be collapsed into worker implementation correctness.
 
 ## Human/device oracle
 
@@ -123,16 +190,16 @@ The gateway does not use subjective human/device checking as justification for d
 
 Long-context tiering is per call. Prefer exact provider `context_tokens`; otherwise infer conservatively as `fresh_input + cached_input + cache_write`. Pricing metadata records its official source URL and check date.
 
-## Qualitative cold-start policy
+## Qualitative cold-start worker policy
 
-Until enough calibrated evidence exists:
-- Gateway: obvious low-risk, bounded, machine-verifiable work only; otherwise authority escalation,
+Until enough calibrated worker evidence exists:
+
 - Luna: low ambiguity + strong oracle + cheap recovery,
 - Terra: normal coupled implementation,
 - Sol: weak oracle, difficult debugging, subtle invariants/concurrency/migration,
 - Astra: authority, integration, security/privacy/public contracts, high-consequence final judgment.
 
-These are priors, not quotas.
+These are priors, not quotas, and do not define gateway admission.
 
 ## Scout VOI
 

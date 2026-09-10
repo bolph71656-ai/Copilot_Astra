@@ -1,6 +1,12 @@
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.gateway_policy import evaluate_gateway, load_policy
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class GatewayPolicyTests(unittest.TestCase):
@@ -93,6 +99,28 @@ class GatewayPolicyTests(unittest.TestCase):
         self.assertEqual(result["decision"], "ESCALATE")
         self.assertEqual(result["mode"], "rollback")
         self.assertIn("false-downroute-rate", result["reasons"])
+
+    def test_cli_normal_escalation_returns_zero_exit_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing_calibration = Path(tmp) / "missing.json"
+            done = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/gateway_policy.py",
+                    "--task-class", "mechanical",
+                    "--risk-class", "standard",
+                    "--oracle-strength", "deterministic",
+                    "--explicit-acceptance",
+                    "--local-bounded-surface",
+                    "--calibration", str(missing_calibration),
+                    "--json",
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn('"decision": "ESCALATE"', done.stdout)
 
 
 if __name__ == "__main__":

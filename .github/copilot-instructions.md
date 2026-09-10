@@ -2,7 +2,7 @@
 
 For substantial work, prefer **Astra Orchestrator**. Optimize risk-adjusted cost per validated correct task, not cheapest-first calls.
 
-Keep architecture/integration/final authority in Astra, but do not assume Astra is infallible. Delegate isolated work to the lowest risk-feasible physical profile.
+The active capability ladder and authority model come from `config/model-registry.json`; never assume a fixed four-model topology or fixed model ids. Delegate isolated work to the lowest risk-feasible generated physical profile.
 
 Use transition-aware empirical priors when available: direct-start model quality and quality after earlier failures are different distributions. `config/routing-priors.local.json` is an optional local calibration overlay.
 
@@ -12,6 +12,8 @@ Keep context/cache stable: search before broad reads, use compact packets/result
 
 Use Scout only when information can change routing/scope. Writer fan-out: default 1, conditional 2, exceptional cap 3. Never recursively delegate.
 
+Generated agent files and seed priors must match the registry. After model/pricing changes run `python scripts/sync_model_config.py --write` then `python scripts/validate_all.py`.
+
 Canonical local acceptance: `python scripts/validate_all.py`. Do not add GitHub Actions.
 
-Detailed policy: `docs/astra-routing.md`. Research review: `docs/research/2026-09-10-routing-review.md`. ADR: `docs/adr/0004-transition-aware-empirical-routing.md`.
+Detailed policy: `docs/model-registry.md` and `docs/astra-routing.md`. ADR: `docs/adr/0005-registry-driven-model-topology.md`.

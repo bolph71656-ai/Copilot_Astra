@@ -17,7 +17,7 @@ def _stage_probs(stage:Stage,entries,task_class,oracle,reached):
 def expected_route_metrics(stages:Iterable[Stage],*,prior_entries=None,task_class='default',oracle_strength='mixed',handoff_units=0.0,failure_penalty_units=0.0,dispatch_units=0.0,defect_penalty_units=0.0,latency_weight=0.0,human_validation_required=False,human_detection_rate=0.0,human_validation_units=0.0,human_validation_seconds=0.0):
     seq=list(stages)
     if not seq: raise ValueError('route must contain at least one stage')
-    reach=1.0; cost=dispatch_units if seq[0].model!='astra' else 0.0; latency=correct=hidden=terminal=0.0
+    reach=1.0; cost=dispatch_units if len(seq)>1 else 0.0; latency=correct=hidden=terminal=0.0
     auto_escape_events=human_detect_events=human_checks=0.0; assumptions=[]
     for i,stage in enumerate(seq):
         reached='direct' if i==0 else '>'.join(s.model for s in seq[:i])

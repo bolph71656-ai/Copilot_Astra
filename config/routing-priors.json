@@ -1,22 +1,94 @@
 {
   "schema_version": 1,
   "as_of": "2026-09-10",
-  "purpose": "Low-confidence cold-start priors. Calibrated local overlays should replace these where evidence exists.",
+  "generated_from": "config/model-registry.json",
+  "purpose": "Generated low-confidence cold-start priors. Calibrated local overlays replace fields where evidence exists.",
   "entries": [
-    {"task_class": "*", "oracle_strength": "*", "model": "luna", "reached_after": "direct", "p_correct": 0.8, "detection_rate": 0.95, "source_kind": "seed", "samples": 0},
-    {"task_class": "*", "oracle_strength": "*", "model": "terra", "reached_after": "direct", "p_correct": 0.94, "detection_rate": 0.97, "source_kind": "seed", "samples": 0},
-    {"task_class": "*", "oracle_strength": "*", "model": "terra", "reached_after": "after:any", "p_correct": 0.88, "detection_rate": 0.97, "source_kind": "seed", "samples": 0},
-    {"task_class": "*", "oracle_strength": "*", "model": "sol", "reached_after": "direct", "p_correct": 0.98, "detection_rate": 0.985, "source_kind": "seed", "samples": 0},
-    {"task_class": "*", "oracle_strength": "*", "model": "sol", "reached_after": "after:any", "p_correct": 0.94, "detection_rate": 0.985, "source_kind": "seed", "samples": 0},
-    {"task_class": "*", "oracle_strength": "*", "model": "astra", "reached_after": "direct", "p_correct": 0.995, "detection_rate": 0.995, "source_kind": "seed", "samples": 0},
-    {"task_class": "*", "oracle_strength": "*", "model": "astra", "reached_after": "after:any", "p_correct": 0.98, "detection_rate": 0.995, "source_kind": "seed", "samples": 0}
+    {
+      "task_class": "*",
+      "oracle_strength": "*",
+      "model": "luna",
+      "reached_after": "direct",
+      "p_correct": 0.8,
+      "detection_rate": 0.95,
+      "source_kind": "registry-seed",
+      "samples": 0
+    },
+    {
+      "task_class": "*",
+      "oracle_strength": "*",
+      "model": "terra",
+      "reached_after": "direct",
+      "p_correct": 0.94,
+      "detection_rate": 0.97,
+      "source_kind": "registry-seed",
+      "samples": 0
+    },
+    {
+      "task_class": "*",
+      "oracle_strength": "*",
+      "model": "terra",
+      "reached_after": "after:any",
+      "p_correct": 0.88,
+      "detection_rate": 0.97,
+      "source_kind": "registry-seed",
+      "samples": 0
+    },
+    {
+      "task_class": "*",
+      "oracle_strength": "*",
+      "model": "sol",
+      "reached_after": "direct",
+      "p_correct": 0.98,
+      "detection_rate": 0.985,
+      "source_kind": "registry-seed",
+      "samples": 0
+    },
+    {
+      "task_class": "*",
+      "oracle_strength": "*",
+      "model": "sol",
+      "reached_after": "after:any",
+      "p_correct": 0.94,
+      "detection_rate": 0.985,
+      "source_kind": "registry-seed",
+      "samples": 0
+    },
+    {
+      "task_class": "*",
+      "oracle_strength": "*",
+      "model": "astra",
+      "reached_after": "direct",
+      "p_correct": 0.995,
+      "detection_rate": 0.995,
+      "source_kind": "registry-seed",
+      "samples": 0
+    },
+    {
+      "task_class": "*",
+      "oracle_strength": "*",
+      "model": "astra",
+      "reached_after": "after:any",
+      "p_correct": 0.98,
+      "detection_rate": 0.995,
+      "source_kind": "registry-seed",
+      "samples": 0
+    }
   ],
   "human_oracles": [
-    {"task_class": "*", "human_validation_kind": "*", "detection_rate": 0.5, "mean_validation_seconds": 0.0, "source_kind": "conservative-seed", "samples": 0}
+    {
+      "task_class": "*",
+      "human_validation_kind": "*",
+      "detection_rate": 0.5,
+      "mean_validation_seconds": 0.0,
+      "source_kind": "conservative-seed",
+      "samples": 0
+    }
   ],
   "notes": [
+    "Generated from the active model registry; do not hand-edit seed model entries.",
     "Seed probabilities are policy assumptions, not benchmark claims.",
-    "Astra is final authority but is not modeled as infallible.",
-    "Use scripts/calibrate_routing.py --routing-priors-out config/routing-priors.local.json to create a local evidence overlay."
+    "The authority model is final authority but must not be modeled as infallible.",
+    "Use scripts/calibrate_routing.py --routing-priors-out config/routing-priors.local.json for local evidence overlays."
   ]
 }

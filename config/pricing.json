@@ -1,19 +1,39 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "as_of": "2026-09-10",
   "source_url": "https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing",
   "source_checked_at": "2026-09-10",
   "unit_definition": "routing units per 1,000,000 tokens; 100 units = 1 USD in this repository estimator",
-  "source_policy": "Engineering snapshot checked against GitHub Copilot's official models-and-pricing table. Revalidate before financial reporting because rates and supported models can change.",
+  "source_policy": "Engineering snapshot checked against GitHub Copilot's official models-and-pricing table. Revalidate before financial reporting because rates, tiers, thresholds, and supported models can change.",
   "models": {
-    "luna": {"default": {"fresh_input": 20, "cached_input": 2, "cache_write": 25, "output": 120}, "long": {"fresh_input": 40, "cached_input": 4, "cache_write": 50, "output": 180}, "long_threshold": 200000},
-    "terra": {"default": {"fresh_input": 200, "cached_input": 20, "cache_write": 250, "output": 1200}, "long": {"fresh_input": 400, "cached_input": 40, "cache_write": 500, "output": 1800}, "long_threshold": 272000},
-    "sol": {"default": {"fresh_input": 400, "cached_input": 40, "cache_write": 500, "output": 2000}, "long": {"fresh_input": 800, "cached_input": 80, "cache_write": 1000, "output": 3000}, "long_threshold": 272000},
-    "astra": {"default": {"fresh_input": 1000, "cached_input": 100, "cache_write": 1250, "output": 5000}, "long": {"fresh_input": 2000, "cached_input": 200, "cache_write": 2500, "output": 7500}, "long_threshold": 272000}
+    "luna": {
+      "tiers": [
+        {"name": "default", "min_context_tokens": 0, "rates": {"fresh_input": 20, "cached_input": 2, "cache_write": 25, "output": 120}},
+        {"name": "long", "min_context_tokens": 200001, "rates": {"fresh_input": 40, "cached_input": 4, "cache_write": 50, "output": 180}}
+      ]
+    },
+    "terra": {
+      "tiers": [
+        {"name": "default", "min_context_tokens": 0, "rates": {"fresh_input": 200, "cached_input": 20, "cache_write": 250, "output": 1200}},
+        {"name": "long", "min_context_tokens": 272001, "rates": {"fresh_input": 400, "cached_input": 40, "cache_write": 500, "output": 1800}}
+      ]
+    },
+    "sol": {
+      "tiers": [
+        {"name": "default", "min_context_tokens": 0, "rates": {"fresh_input": 400, "cached_input": 40, "cache_write": 500, "output": 2000}},
+        {"name": "long", "min_context_tokens": 272001, "rates": {"fresh_input": 800, "cached_input": 80, "cache_write": 1000, "output": 3000}}
+      ]
+    },
+    "astra": {
+      "tiers": [
+        {"name": "default", "min_context_tokens": 0, "rates": {"fresh_input": 1000, "cached_input": 100, "cache_write": 1250, "output": 5000}},
+        {"name": "long", "min_context_tokens": 272001, "rates": {"fresh_input": 2000, "cached_input": 200, "cache_write": 2500, "output": 7500}}
+      ]
+    }
   },
   "notes": [
-    "Long-context threshold selection is per model call.",
-    "When provider telemetry exposes exact context_tokens, pass it explicitly. The estimator otherwise conservatively counts fresh + cached + cache-write tokens as input context.",
-    "Pricing data is operational metadata, not a guarantee of future GitHub billing."
+    "Pricing models may be a superset of the active route so historical/disabled models can remain priced without becoming routable.",
+    "Each model can have one or more arbitrary named pricing tiers selected by min_context_tokens.",
+    "When provider telemetry exposes exact context_tokens, pass it explicitly. The estimator otherwise conservatively counts fresh + cached + cache-write tokens as input context."
   ]
 }

@@ -3,25 +3,25 @@
     "name": "mechanical_strong_oracle",
     "stages": [
       {
-        "model": "luna",
+        "model": "low",
         "cost": 1.0,
         "p_correct": 0.96,
         "detection_rate": 0.995
       },
       {
-        "model": "terra",
+        "model": "mid",
         "cost": 10.0,
         "p_correct": 0.985,
         "detection_rate": 0.995
       },
       {
-        "model": "sol",
+        "model": "high",
         "cost": 20.0,
         "p_correct": 0.995,
         "detection_rate": 0.998
       },
       {
-        "model": "astra",
+        "model": "authority",
         "cost": 50.0,
         "p_correct": 0.995,
         "detection_rate": 0.995
@@ -35,35 +35,35 @@
     "max_terminal_failure": 0.05,
     "min_validated_correct": 0.94,
     "expected_path": [
-      "luna",
-      "terra",
-      "sol",
-      "astra"
+      "low",
+      "mid",
+      "high",
+      "authority"
     ]
   },
   {
-    "name": "moderate_coupling_terra_direct",
+    "name": "moderate_coupling_mid_direct",
     "stages": [
       {
-        "model": "luna",
+        "model": "low",
         "cost": 1.0,
         "p_correct": 0.2,
         "detection_rate": 0.95
       },
       {
-        "model": "terra",
+        "model": "mid",
         "cost": 8.0,
         "p_correct": 0.94,
         "detection_rate": 0.99
       },
       {
-        "model": "sol",
+        "model": "high",
         "cost": 15.0,
         "p_correct": 0.985,
         "detection_rate": 0.995
       },
       {
-        "model": "astra",
+        "model": "authority",
         "cost": 45.0,
         "p_correct": 0.995,
         "detection_rate": 0.995
@@ -77,34 +77,34 @@
     "max_terminal_failure": 0.05,
     "min_validated_correct": 0.94,
     "expected_path": [
-      "terra",
-      "sol",
-      "astra"
+      "mid",
+      "high",
+      "authority"
     ]
   },
   {
-    "name": "weak_oracle_jump_to_sol",
+    "name": "weak_oracle_jump_to_high",
     "stages": [
       {
-        "model": "luna",
+        "model": "low",
         "cost": 1.0,
         "p_correct": 0.65,
         "detection_rate": 0.5
       },
       {
-        "model": "terra",
+        "model": "mid",
         "cost": 8.0,
         "p_correct": 0.75,
         "detection_rate": 0.75
       },
       {
-        "model": "sol",
+        "model": "high",
         "cost": 14.0,
         "p_correct": 0.97,
         "detection_rate": 0.99
       },
       {
-        "model": "astra",
+        "model": "authority",
         "cost": 45.0,
         "p_correct": 0.995,
         "detection_rate": 0.995
@@ -118,27 +118,27 @@
     "max_terminal_failure": 0.05,
     "min_validated_correct": 0.94,
     "expected_path": [
-      "sol",
-      "astra"
+      "high",
+      "authority"
     ]
   },
   {
-    "name": "warm_micro_edit_astra_direct",
+    "name": "warm_micro_edit_authority_direct",
     "stages": [
       {
-        "model": "luna",
+        "model": "low",
         "cost": 0.01,
         "p_correct": 0.99,
         "detection_rate": 1.0
       },
       {
-        "model": "terra",
+        "model": "mid",
         "cost": 0.1,
         "p_correct": 0.999,
         "detection_rate": 1.0
       },
       {
-        "model": "astra",
+        "model": "authority",
         "cost": 0.5,
         "p_correct": 0.995,
         "detection_rate": 0.995
@@ -148,32 +148,32 @@
     "max_terminal_failure": 0.05,
     "min_validated_correct": 0.94,
     "expected_path": [
-      "astra"
+      "authority"
     ]
   },
   {
-    "name": "skip_terra_after_luna",
+    "name": "skip_mid_after_low",
     "stages": [
       {
-        "model": "luna",
+        "model": "low",
         "cost": 1.0,
         "p_correct": 0.8,
         "detection_rate": 1.0
       },
       {
-        "model": "terra",
+        "model": "mid",
         "cost": 18.0,
         "p_correct": 0.85,
         "detection_rate": 1.0
       },
       {
-        "model": "sol",
+        "model": "high",
         "cost": 20.0,
         "p_correct": 0.99,
         "detection_rate": 1.0
       },
       {
-        "model": "astra",
+        "model": "authority",
         "cost": 50.0,
         "p_correct": 0.995,
         "detection_rate": 0.995
@@ -185,34 +185,34 @@
     "max_terminal_failure": 0.05,
     "min_validated_correct": 0.94,
     "expected_path": [
-      "luna",
-      "sol",
-      "astra"
+      "low",
+      "high",
+      "authority"
     ]
   },
   {
     "name": "device_visual_strong_human_oracle",
     "stages": [
       {
-        "model": "luna",
+        "model": "low",
         "cost": 1.0,
         "p_correct": 0.88,
         "detection_rate": 0.45
       },
       {
-        "model": "terra",
+        "model": "mid",
         "cost": 8.0,
         "p_correct": 0.97,
         "detection_rate": 0.85
       },
       {
-        "model": "sol",
+        "model": "high",
         "cost": 14.0,
         "p_correct": 0.99,
         "detection_rate": 0.95
       },
       {
-        "model": "astra",
+        "model": "authority",
         "cost": 45.0,
         "p_correct": 0.995,
         "detection_rate": 0.995
@@ -230,35 +230,35 @@
     "max_terminal_failure": 0.05,
     "min_validated_correct": 0.94,
     "expected_path": [
-      "luna",
-      "terra",
-      "sol",
-      "astra"
+      "low",
+      "mid",
+      "high",
+      "authority"
     ]
   },
   {
-    "name": "device_retest_cost_skips_luna",
+    "name": "device_retest_cost_skips_low",
     "stages": [
       {
-        "model": "luna",
+        "model": "low",
         "cost": 1.0,
         "p_correct": 0.55,
         "detection_rate": 0.2
       },
       {
-        "model": "terra",
+        "model": "mid",
         "cost": 8.0,
         "p_correct": 0.95,
         "detection_rate": 0.8
       },
       {
-        "model": "sol",
+        "model": "high",
         "cost": 14.0,
         "p_correct": 0.99,
         "detection_rate": 0.95
       },
       {
-        "model": "astra",
+        "model": "authority",
         "cost": 40.0,
         "p_correct": 0.995,
         "detection_rate": 0.995
@@ -276,34 +276,34 @@
     "max_terminal_failure": 0.05,
     "min_validated_correct": 0.94,
     "expected_path": [
-      "terra",
-      "sol",
-      "astra"
+      "mid",
+      "high",
+      "authority"
     ]
   },
   {
-    "name": "high_risk_device_check_still_needs_sol",
+    "name": "high_risk_device_check_still_needs_high",
     "stages": [
       {
-        "model": "luna",
+        "model": "low",
         "cost": 1.0,
         "p_correct": 0.8,
         "detection_rate": 0.25
       },
       {
-        "model": "terra",
+        "model": "mid",
         "cost": 8.0,
         "p_correct": 0.92,
         "detection_rate": 0.65
       },
       {
-        "model": "sol",
+        "model": "high",
         "cost": 15.0,
         "p_correct": 0.985,
         "detection_rate": 0.95
       },
       {
-        "model": "astra",
+        "model": "authority",
         "cost": 50.0,
         "p_correct": 0.995,
         "detection_rate": 0.995
@@ -321,8 +321,8 @@
     "max_terminal_failure": 0.03,
     "min_validated_correct": 0.97,
     "expected_path": [
-      "sol",
-      "astra"
+      "high",
+      "authority"
     ]
   },
   {
@@ -331,15 +331,15 @@
     "oracle_strength": "mixed",
     "stages": [
       {
-        "model": "luna",
+        "model": "low",
         "cost": 1.0
       },
       {
-        "model": "sol",
+        "model": "high",
         "cost": 9.0
       },
       {
-        "model": "astra",
+        "model": "authority",
         "cost": 30.0
       }
     ],
@@ -347,7 +347,7 @@
       {
         "task_class": "*",
         "oracle_strength": "*",
-        "model": "luna",
+        "model": "low",
         "reached_after": "direct",
         "p_correct": 0.85,
         "detection_rate": 1.0
@@ -355,7 +355,7 @@
       {
         "task_class": "*",
         "oracle_strength": "*",
-        "model": "sol",
+        "model": "high",
         "reached_after": "direct",
         "p_correct": 0.985,
         "detection_rate": 1.0
@@ -363,7 +363,7 @@
       {
         "task_class": "*",
         "oracle_strength": "*",
-        "model": "sol",
+        "model": "high",
         "reached_after": "after:any",
         "p_correct": 0.3,
         "detection_rate": 1.0
@@ -371,7 +371,7 @@
       {
         "task_class": "*",
         "oracle_strength": "*",
-        "model": "astra",
+        "model": "authority",
         "reached_after": "direct",
         "p_correct": 0.995,
         "detection_rate": 0.995
@@ -379,24 +379,24 @@
       {
         "task_class": "*",
         "oracle_strength": "*",
-        "model": "astra",
-        "reached_after": "luna",
+        "model": "authority",
+        "reached_after": "low",
         "p_correct": 0.6,
         "detection_rate": 0.995
       },
       {
         "task_class": "*",
         "oracle_strength": "*",
-        "model": "astra",
-        "reached_after": "sol",
+        "model": "authority",
+        "reached_after": "high",
         "p_correct": 0.98,
         "detection_rate": 0.995
       },
       {
         "task_class": "*",
         "oracle_strength": "*",
-        "model": "astra",
-        "reached_after": "luna>sol",
+        "model": "authority",
+        "reached_after": "low>high",
         "p_correct": 0.8,
         "detection_rate": 0.995
       }
@@ -408,9 +408,70 @@
     "max_terminal_failure": 0.05,
     "min_validated_correct": 0.94,
     "expected_path": [
-      "luna",
-      "sol",
-      "astra"
+      "low",
+      "high",
+      "authority"
+    ]
+  },
+  {
+    "name": "two_model_topology_low_then_authority",
+    "stages": [
+      {
+        "model": "low",
+        "cost": 1.0,
+        "p_correct": 0.96,
+        "detection_rate": 1.0
+      },
+      {
+        "model": "authority",
+        "cost": 50.0,
+        "p_correct": 0.995,
+        "detection_rate": 0.995
+      }
+    ],
+    "dispatch_units": 0.25,
+    "handoff_units": 0.5,
+    "failure_penalty_units": 0.5,
+    "max_hidden_failure": 0.01,
+    "max_terminal_failure": 0.05,
+    "min_validated_correct": 0.94,
+    "expected_path": [
+      "low",
+      "authority"
+    ]
+  },
+  {
+    "name": "three_model_topology_high_direct",
+    "stages": [
+      {
+        "model": "low",
+        "cost": 1.0,
+        "p_correct": 0.1,
+        "detection_rate": 0.95
+      },
+      {
+        "model": "high",
+        "cost": 14.0,
+        "p_correct": 0.98,
+        "detection_rate": 0.99
+      },
+      {
+        "model": "authority",
+        "cost": 50.0,
+        "p_correct": 0.995,
+        "detection_rate": 0.995
+      }
+    ],
+    "dispatch_units": 0.5,
+    "handoff_units": 1.0,
+    "failure_penalty_units": 3.0,
+    "defect_penalty_units": 250.0,
+    "max_hidden_failure": 0.01,
+    "max_terminal_failure": 0.05,
+    "min_validated_correct": 0.94,
+    "expected_path": [
+      "high",
+      "authority"
     ]
   }
 ]

@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-09-10",
+  "parent_agent_name": "Astra Orchestrator",
+  "authority_model": "astra",
+  "route_order": [
+    "luna",
+    "terra",
+    "sol",
+    "astra"
+  ],
+  "models": {
+    "luna": {
+      "display_name": "Luna",
+      "copilot_model": "GPT-5.6 Luna (copilot)",
+      "capability_rank": 10,
+      "tier_guidance": "Lowest-cost worker for explicit, low-ambiguity work with strong, cheap validation.",
+      "seed_prior": {
+        "direct": {
+          "p_correct": 0.8,
+          "detection_rate": 0.95
+        },
+        "after_any": {
+          "p_correct": 0.72,
+          "detection_rate": 0.95
+        }
+      }
+    },
+    "terra": {
+      "display_name": "Terra",
+      "copilot_model": "GPT-5.6 Terra (copilot)",
+      "capability_rank": 20,
+      "tier_guidance": "General worker for moderate ambiguity, coupled files, and local design judgment.",
+      "seed_prior": {
+        "direct": {
+          "p_correct": 0.94,
+          "detection_rate": 0.97
+        },
+        "after_any": {
+          "p_correct": 0.88,
+          "detection_rate": 0.97
+        }
+      }
+    },
+    "sol": {
+      "display_name": "Sol",
+      "copilot_model": "GPT-5.6 Sol (copilot)",
+      "capability_rank": 30,
+      "tier_guidance": "High-reasoning worker for subtle invariants, weak oracles, concurrency, migrations, and difficult bounded work.",
+      "seed_prior": {
+        "direct": {
+          "p_correct": 0.98,
+          "detection_rate": 0.985
+        },
+        "after_any": {
+          "p_correct": 0.94,
+          "detection_rate": 0.985
+        }
+      }
+    },
+    "astra": {
+      "display_name": "Astra",
+      "copilot_model": "GPT-6 Astra (copilot)",
+      "capability_rank": 40,
+      "tier_guidance": "Authority model for long-horizon intent, architecture, integration, high-risk decisions, and final acceptance.",
+      "seed_prior": {
+        "direct": {
+          "p_correct": 0.995,
+          "detection_rate": 0.995
+        },
+        "after_any": {
+          "p_correct": 0.98,
+          "detection_rate": 0.995
+        }
+      }
+    }
+  },
+  "role_policies": {
+    "scout": {
+      "slots": [
+        "lowest"
+      ],
+      "min_worker_count": 1
+    },
+    "research": {
+      "slots": [
+        "lowest",
+        "middle"
+      ],
+      "min_worker_count": 1
+    },
+    "execute": {
+      "slots": [
+        "all"
+      ],
+      "min_worker_count": 1
+    },
+    "debug": {
+      "slots": [
+        "highest"
+      ],
+      "min_worker_count": 2
+    },
+    "verify": {
+      "slots": [
+        "all"
+      ],
+      "min_worker_count": 1
+    }
+  },
+  "human_oracle_seed": {
+    "detection_rate": 0.5,
+    "mean_validation_seconds": 0.0,
+    "source_kind": "conservative-seed"
+  },
+  "notes": [
+    "route_order is the active capability ladder. Remove or add model ids here to operate with 2, 3, 4, or more models.",
+    "authority_model must be the final route_order entry. Intermediate models are optional and route enumeration remains monotone.",
+    "role_policies select physical subagent profiles from active non-authority models; missing high-tier workers fall back to the parent authority rather than forcing a weak debug profile.",
+    "After changing this file or pricing, run python scripts/sync_model_config.py --write followed by python scripts/validate_all.py."
+  ]
+}

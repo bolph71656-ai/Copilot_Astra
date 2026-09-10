@@ -13,6 +13,7 @@ from scripts.gateway_policy import POLICY_PATH, load_policy
 from scripts.route_cost import OPERATIONAL_COSTS_PATH, load_operational_costs
 
 GATEWAY_AGENT = ROOT / ".github" / "agents" / "astra-gateway.agent.md"
+GATEWAY_ADR = ROOT / "docs" / "adr" / "0006-calibrated-gateway-admission.md"
 GITIGNORE = ROOT / ".gitignore"
 LOCAL_GATEWAY_CALIBRATION = "config/gateway-calibration.local.json"
 
@@ -38,6 +39,8 @@ def validate() -> list[str]:
             errors.append(f"gateway bootstrap must keep {key}=true")
     if {"high", "critical"} & set(calibrated.get("direct_risk_classes", [])):
         errors.append("gateway calibrated policy must never directly allow high/critical risk")
+    if set(calibrated.get("direct_oracle_strengths", [])) - {"deterministic"}:
+        errors.append("gateway calibrated policy may directly allow deterministic oracle only")
     if int(calibrated.get("min_samples", 0)) < 1:
         errors.append("gateway calibrated min_samples must be positive")
     confidence_z = calibrated.get("confidence_z")
@@ -86,6 +89,9 @@ def validate() -> list[str]:
         ):
             if required not in text:
                 errors.append(f"gateway agent missing policy contract text: {required}")
+
+    if not GATEWAY_ADR.exists():
+        errors.append("calibrated gateway ADR missing")
 
     ignore = GITIGNORE.read_text(encoding="utf-8") if GITIGNORE.exists() else ""
     if LOCAL_GATEWAY_CALIBRATION not in ignore:

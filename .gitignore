@@ -1,4 +1,5 @@
 # Local routing/telemetry data
 config/routing-priors.local.json
+config/gateway-calibration.local.json
 observations*.jsonl
 .copilot-otel.jsonl

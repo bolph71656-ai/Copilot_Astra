@@ -38,6 +38,7 @@ from scripts.routing_priors import (
 )
 
 RISK_POLICY_PATH = ROOT / "config" / "risk-policy.json"
+OPERATIONAL_COSTS_PATH = ROOT / "config" / "operational-costs.json"
 REGISTRY = load_model_registry(MODEL_REGISTRY_PATH)
 
 
@@ -102,6 +103,21 @@ def load_risk_policy(path: Path = RISK_POLICY_PATH):
     return raw
 
 
+def load_operational_costs(path: Path = OPERATIONAL_COSTS_PATH) -> dict:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if raw.get("schema_version") != 1:
+        raise ValueError("unsupported operational-costs schema")
+    defaults = raw.get("defaults")
+    defect = raw.get("defect_penalty_units_by_risk")
+    if not isinstance(defaults, dict) or not isinstance(defect, dict):
+        raise ValueError("operational-costs requires defaults and defect_penalty_units_by_risk")
+    for key in ("dispatch_units", "handoff_units", "failure_penalty_units", "latency_weight"):
+        defaults[key] = non_negative_float(str(defaults.get(key)))
+    for key, value in list(defect.items()):
+        defect[key] = non_negative_float(str(value))
+    return raw
+
+
 def resolve_risk_constraints(args):
     policy = load_risk_policy()
     name = getattr(args, "risk_class", None) or policy.get("default_class", "standard")
@@ -113,6 +129,47 @@ def resolve_risk_constraints(args):
         if value is not None:
             out[key] = value
     return {"risk_class": name, **out}
+
+
+def resolve_operational_costs(args, *, risk_class: str) -> dict:
+    cfg = load_operational_costs()
+    defaults = cfg["defaults"]
+
+    def choose(attr: str, default_key: str) -> tuple[float, str]:
+        value = getattr(args, attr, None)
+        if value is not None:
+            return float(value), "cli"
+        return float(defaults[default_key]), "config"
+
+    dispatch, dispatch_source = choose("dispatch_units", "dispatch_units")
+    handoff, handoff_source = choose("handoff_units", "handoff_units")
+    failure, failure_source = choose("failure_penalty", "failure_penalty_units")
+    latency_weight, latency_source = choose("latency_weight", "latency_weight")
+    if getattr(args, "defect_penalty", None) is not None:
+        defect = float(args.defect_penalty)
+        defect_source = "cli"
+    else:
+        by_risk = cfg["defect_penalty_units_by_risk"]
+        if risk_class not in by_risk:
+            raise ValueError(f"operational-costs missing defect penalty for risk class {risk_class!r}")
+        defect = float(by_risk[risk_class])
+        defect_source = "config"
+    return {
+        "dispatch_units": dispatch,
+        "handoff_units": handoff,
+        "failure_penalty_units": failure,
+        "defect_penalty_units": defect,
+        "latency_weight": latency_weight,
+        "source_kind": cfg.get("source_kind", "unknown"),
+        "measured": bool(cfg.get("measured", False)),
+        "sources": {
+            "dispatch_units": dispatch_source,
+            "handoff_units": handoff_source,
+            "failure_penalty_units": failure_source,
+            "defect_penalty_units": defect_source,
+            "latency_weight": latency_source,
+        },
+    }
 
 
 def build_parser():
@@ -134,11 +191,11 @@ def build_parser():
     parser.add_argument("--max-hidden-failure", type=probability, default=None)
     parser.add_argument("--max-terminal-failure", type=probability, default=None)
     parser.add_argument("--min-validated-correct", type=probability, default=None)
-    parser.add_argument("--dispatch-units", type=non_negative_float, default=0)
-    parser.add_argument("--handoff-units", type=non_negative_float, default=0)
-    parser.add_argument("--failure-penalty", type=non_negative_float, default=0)
-    parser.add_argument("--defect-penalty", type=non_negative_float, default=0)
-    parser.add_argument("--latency-weight", type=non_negative_float, default=0)
+    parser.add_argument("--dispatch-units", type=non_negative_float, default=None)
+    parser.add_argument("--handoff-units", type=non_negative_float, default=None)
+    parser.add_argument("--failure-penalty", type=non_negative_float, default=None)
+    parser.add_argument("--defect-penalty", type=non_negative_float, default=None)
+    parser.add_argument("--latency-weight", type=non_negative_float, default=None)
     parser.add_argument("--latency", type=parse_latency, default={})
     parser.add_argument("--human-validation-required", action="store_true")
     parser.add_argument("--human-validation-kind", default="default")
@@ -205,16 +262,17 @@ def evaluate(args):
             human_seconds = human_prior.get("mean_validation_seconds", 0)
 
     risk = resolve_risk_constraints(args)
+    operational = resolve_operational_costs(args, risk_class=risk["risk_class"])
     options, best = route_options(
         stages,
         prior_entries=entries,
         task_class=args.task_class,
         oracle_strength=args.oracle_strength,
-        dispatch_units=args.dispatch_units,
-        handoff_units=args.handoff_units,
-        failure_penalty_units=args.failure_penalty,
-        defect_penalty_units=args.defect_penalty,
-        latency_weight=args.latency_weight,
+        dispatch_units=operational["dispatch_units"],
+        handoff_units=operational["handoff_units"],
+        failure_penalty_units=operational["failure_penalty_units"],
+        defect_penalty_units=operational["defect_penalty_units"],
+        latency_weight=operational["latency_weight"],
         max_hidden_failure=risk["max_hidden_failure"],
         max_terminal_failure=risk["max_terminal_failure"],
         min_validated_correct=risk["min_validated_correct"],
@@ -231,6 +289,7 @@ def evaluate(args):
             "evaluated_route": selected_models,
         },
         "routing_context": {"task_class": args.task_class, "oracle_strength": args.oracle_strength, **risk},
+        "operational_costs": operational,
         "human_validation": {
             "required": args.human_validation_required,
             "kind": args.human_validation_kind,
@@ -252,11 +311,18 @@ def main():
         return 0
     registry = result["model_registry"]
     context = result["routing_context"]
+    operational = result["operational_costs"]
     print(
         f"authority={registry['authority_model']} active={' -> '.join(registry['active_route'])} "
         f"evaluated={' -> '.join(registry['evaluated_route'])}"
     )
     print(f"risk={context['risk_class']} task={context['task_class']} oracle={context['oracle_strength']}")
+    print(
+        "operational-costs="
+        f"{operational['source_kind']} measured={operational['measured']} "
+        f"dispatch={operational['dispatch_units']} handoff={operational['handoff_units']} "
+        f"failure={operational['failure_penalty_units']} defect={operational['defect_penalty_units']}"
+    )
     print("Candidate routes")
     for option in result["start_options"]:
         suffix = "" if option["viable"] else " [rejected: " + ",".join(option["rejection_reasons"]) + "]"

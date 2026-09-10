@@ -2,7 +2,7 @@ from pathlib import Path
 import unittest
 
 from scripts.model_registry import load_model_registry
-from scripts.sync_model_config import desired_agent_specs
+from scripts.sync_model_config import GATEWAY_FILENAME, PARENT_FILENAME, desired_agent_specs
 
 ROOT=Path(__file__).resolve().parents[1]
 AGENT_DIR=ROOT/".github"/"agents"
@@ -20,15 +20,23 @@ class AgentPolicyTests(unittest.TestCase):
 
     def test_subagents_are_protected_and_non_recursive(self):
         for path in AGENT_DIR.glob("*.agent.md"):
-            if path.name=="astra-orchestrator.agent.md":
+            if path.name in {PARENT_FILENAME, GATEWAY_FILENAME}:
                 continue
             text=path.read_text(encoding="utf-8")
             self.assertIn("agents: []",text,path.name)
             self.assertIn("disable-model-invocation: true",text,path.name)
             self.assertNotIn("'agent'",text.split("---",2)[1],path.name)
 
+    def test_gateway_is_entry_layer_not_worker_subagent(self):
+        path=AGENT_DIR/GATEWAY_FILENAME
+        if path.exists():
+            text=path.read_text(encoding="utf-8")
+            self.assertIn('agents: ["Astra Orchestrator"]',text)
+            self.assertIn("user-invocable: true",text)
+            self.assertIn("disable-model-invocation: true",text)
+
     def test_orchestrator_explicitly_allowlists_current_generated_subagents(self):
-        text=(AGENT_DIR/"astra-orchestrator.agent.md").read_text(encoding="utf-8")
+        text=(AGENT_DIR/PARENT_FILENAME).read_text(encoding="utf-8")
         for spec in self.specs:
             self.assertIn(spec.name,text)
         self.assertIn("not an infallible fallback",text)

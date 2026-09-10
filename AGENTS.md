@@ -7,19 +7,25 @@ This repository uses a conservative two-stage entry path: a generated **Astra Ga
 1. `config/model-registry.json` defines active model ids, capability order, authority model, Copilot model strings, role selection, and seed priors.
 2. `config/pricing.json` defines costs/context tiers independently from topology.
 3. `.github/agents/*.agent.md` and `config/routing-priors.json` are generated; do not hand-edit them.
-4. After model/topology/pricing or gateway-template changes, run `python scripts/sync_model_config.py --write` then `python scripts/validate_all.py`.
-5. Never assume four models or any particular model id. Capability escalation follows the configured `route_order`.
-6. When at least one non-authority model exists, `Astra Gateway` is generated on the lowest active non-authority model. Authority-only topologies omit it.
+4. `config/gateway-policy.json` defines conservative gateway bootstrap, calibrated expansion, and rollback constraints.
+5. `config/operational-costs.json` defines default dispatch/handoff/rework/defect economics for route estimation when CLI values are omitted.
+6. After model/topology/pricing or gateway-template changes, run `python scripts/sync_model_config.py --write` then `python scripts/validate_all.py`.
+7. Never assume four models or any particular model id. Capability escalation follows the configured `route_order`.
+8. When at least one non-authority model exists, `Astra Gateway` is generated on the lowest active non-authority model. Authority-only topologies omit it.
 
 ## Gateway contract
 
 1. `Astra Gateway` is a **fail-closed admission controller**, not a general-purpose parent and not final authority.
-2. It may complete work directly only when all direct-completion gates in `.github/agent-templates/gateway.md` are satisfied.
-3. Any uncertainty, authority trigger, weak oracle, high/critical risk, long-horizon integration need, or substantive failure escalates intact to the authority parent before speculative edits.
-4. The gateway may delegate only to the configured authority parent. It must not directly invoke generated Scout/Research/Execute/Debug/Verify workers.
-5. False down-routing is more costly than over-escalation. Optimize for low false-downroute rate first, then direct-completion rate.
-6. Known authority/high-risk work may invoke the authority parent directly and skip the gateway.
-7. Gateway correctness must be measured separately from worker model correctness priors.
+2. Prompt-level judgment alone does not authorize direct work. Before edits, a candidate direct task must pass the hard semantic gates and `python scripts/gateway_policy.py ...` must return `ALLOW_DIRECT`.
+3. Cold-start/bootstrap direct completion is limited to `exploratory` risk with a decisive `deterministic` oracle, explicit acceptance, and a local bounded surface.
+4. `standard` direct completion requires local `config/gateway-calibration.local.json` evidence that clears the configured minimum sample count, confidence level, safety bounds, authority-rescue bound, and cost break-even.
+5. `high` and `critical` work never completes directly at the gateway.
+6. Any uncertainty, authority trigger, weak oracle, required human/device acceptance, long-horizon integration need, or substantive failure escalates intact to the authority parent before speculative edits.
+7. The gateway may delegate only to the configured authority parent. It must not directly invoke generated Scout/Research/Execute/Debug/Verify workers.
+8. False down-routing is more costly than over-escalation. Optimize for low false-downroute rate first, then direct-completion rate.
+9. Known authority/high-risk work may invoke the authority parent directly and skip the gateway.
+10. Gateway correctness must be measured separately from worker model correctness priors; seed worker priors never unlock gateway expansion.
+11. Gateway rollback conditions are executable policy. Any observed high/critical false down-route pauses direct completion globally.
 
 ## Routing contract
 
@@ -40,6 +46,7 @@ This repository uses a conservative two-stage entry path: a generated **Astra Ga
 15. Unknown/external failure attribution must not update model correctness priors.
 16. Security/privacy, payment/auth, destructive migration, irreversible data change, architecture, public contracts, material disagreement, and final acceptance remain authority-parent responsibilities.
 17. Repository validation is local-only. Do not add GitHub Actions workflows.
+18. `scripts/route_cost.py` uses conservative nonzero operational defaults from `config/operational-costs.json` when values are omitted; explicit CLI values including zero remain available for controlled experiments.
 
 ## Reduced topology behavior
 
@@ -79,14 +86,21 @@ Gateway-to-parent adds:
 
 ## Calibration
 
-Generate a local overlay:
+Generate a local worker-routing overlay:
 
 ```bash
 python scripts/calibrate_routing.py observations.jsonl \
   --routing-priors-out config/routing-priors.local.json
 ```
 
-Gateway telemetry should separately record direct completion, escalation, false down-routing, validation outcome, and authority rescue/rework.
+Generate a local gateway-admission calibration:
+
+```bash
+python scripts/calibrate_gateway.py observations.jsonl \
+  --out config/gateway-calibration.local.json
+```
+
+Both local files are ignored and must not be committed. Gateway telemetry must separately record direct completion, escalation, false down-routing, validation outcome, authority rescue/rework, and gateway-vs-authority economics.
 
 Canonical validation:
 
@@ -94,4 +108,4 @@ Canonical validation:
 python scripts/validate_all.py
 ```
 
-See `docs/model-registry.md`, `docs/astra-routing.md`, `docs/human-device-validation.md`, and `docs/adr/0005-registry-driven-model-topology.md`.
+See `docs/model-registry.md`, `docs/astra-routing.md`, `docs/human-device-validation.md`, `docs/observability.md`, `docs/adr/0005-registry-driven-model-topology.md`, and `docs/adr/0006-calibrated-gateway-admission.md`.

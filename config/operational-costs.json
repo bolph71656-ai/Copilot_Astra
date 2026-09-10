@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "source_kind": "conservative-bootstrap",
+  "measured": false,
+  "defaults": {
+    "dispatch_units": 0.25,
+    "handoff_units": 0.5,
+    "failure_penalty_units": 2.0,
+    "latency_weight": 0.0
+  },
+  "defect_penalty_units_by_risk": {
+    "exploratory": 25.0,
+    "standard": 100.0,
+    "high": 500.0,
+    "critical": 2000.0
+  },
+  "notes": [
+    "These are conservative engineering defaults, not measured billing facts.",
+    "Explicit CLI values always override this file, including an explicit zero.",
+    "Replace with locally measured values when representative telemetry exists.",
+    "Latency weight remains zero until the operator assigns an economic value to latency; latency seconds are still reported separately."
+  ]
+}

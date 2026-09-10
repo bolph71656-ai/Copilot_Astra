@@ -37,9 +37,10 @@ class GatewayPolicyTests(unittest.TestCase):
         self.assertEqual(result["decision"], "ESCALATE")
         self.assertIn("authority-trigger", result["reasons"])
 
-    def test_standard_can_expand_only_after_conservative_calibration(self):
-        calibration = {
+    def _good_standard_calibration(self):
+        return {
             "schema_version": 1,
+            "confidence_z": 1.96,
             "entries": [{
                 "task_class": "mechanical",
                 "risk_class": "standard",
@@ -52,13 +53,24 @@ class GatewayPolicyTests(unittest.TestCase):
             }],
             "global": {"samples": 250, "false_downroute_rate": 0.0, "authority_rescue_rate": 0.0, "mean_cost_ratio_vs_authority_direct": 0.60, "high_or_critical_false_downroutes": 0},
         }
+
+    def test_standard_can_expand_only_after_conservative_calibration(self):
+        calibration = self._good_standard_calibration()
         result = evaluate_gateway(**{**self.base, "risk_class": "standard", "calibration": calibration})
         self.assertEqual(result["decision"], "ALLOW_DIRECT")
         self.assertEqual(result["mode"], "calibrated")
 
+    def test_lower_confidence_calibration_cannot_unlock_standard(self):
+        calibration = self._good_standard_calibration()
+        calibration["confidence_z"] = 1.0
+        result = evaluate_gateway(**{**self.base, "risk_class": "standard", "calibration": calibration})
+        self.assertEqual(result["decision"], "ESCALATE")
+        self.assertIn("insufficient-confidence-level", result["reasons"])
+
     def test_global_rollback_pauses_even_bootstrap_direct_work(self):
         calibration = {
             "schema_version": 1,
+            "confidence_z": 1.96,
             "entries": [],
             "global": {"samples": 20, "false_downroute_rate": 0.05, "authority_rescue_rate": 0.0, "mean_cost_ratio_vs_authority_direct": 0.5, "high_or_critical_false_downroutes": 0},
         }

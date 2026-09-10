@@ -70,6 +70,7 @@ def _new_stats() -> dict:
         "authority_rescues": 0,
         "cost_ratio_samples": 0,
         "cost_ratio_total": 0.0,
+        "high_or_critical_direct_attempts": 0,
         "high_or_critical_false_downroutes": 0,
     }
 
@@ -78,6 +79,8 @@ def _add(stats: dict, row: dict) -> None:
     if row["gateway_action"] != "direct":
         return
     stats["samples"] += 1
+    if row["risk_class"] in {"high", "critical"}:
+        stats["high_or_critical_direct_attempts"] += 1
     if bool(row["final_validated_correct"]):
         stats["validated_correct"] += 1
     if row["false_downroute"]:
@@ -117,6 +120,7 @@ def _finalize(stats: dict, *, z: float) -> dict:
             if stats["cost_ratio_samples"]
             else None
         ),
+        "high_or_critical_direct_attempts": stats["high_or_critical_direct_attempts"],
         "high_or_critical_false_downroutes": stats["high_or_critical_false_downroutes"],
     }
 

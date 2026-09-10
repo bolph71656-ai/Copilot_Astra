@@ -24,7 +24,7 @@ class GatewayPolicyTests(unittest.TestCase):
     def test_standard_escalates_without_calibrated_evidence(self):
         result = evaluate_gateway(**{**self.base, "risk_class": "standard"})
         self.assertEqual(result["decision"], "ESCALATE")
-        self.assertIn("no-calibrated-evidence", result["reasons"])
+        self.assertIn("no-exact-calibrated-evidence", result["reasons"])
 
     def test_high_and_critical_always_escalate(self):
         for risk in ("high", "critical"):
@@ -59,6 +59,13 @@ class GatewayPolicyTests(unittest.TestCase):
         result = evaluate_gateway(**{**self.base, "risk_class": "standard", "calibration": calibration})
         self.assertEqual(result["decision"], "ALLOW_DIRECT")
         self.assertEqual(result["mode"], "calibrated")
+
+    def test_wildcard_calibration_cannot_unlock_standard(self):
+        calibration = self._good_standard_calibration()
+        calibration["entries"][0]["task_class"] = "*"
+        result = evaluate_gateway(**{**self.base, "risk_class": "standard", "calibration": calibration})
+        self.assertEqual(result["decision"], "ESCALATE")
+        self.assertIn("no-exact-calibrated-evidence", result["reasons"])
 
     def test_lower_confidence_calibration_cannot_unlock_standard(self):
         calibration = self._good_standard_calibration()

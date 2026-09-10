@@ -2,13 +2,16 @@
 """Static validation for Astra Gateway policy, calibration plumbing, and routing economics defaults."""
 from __future__ import annotations
 
-import json
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from scripts.gateway_policy import POLICY_PATH, load_policy
 from scripts.route_cost import OPERATIONAL_COSTS_PATH, load_operational_costs
 
-ROOT = Path(__file__).resolve().parents[1]
 GATEWAY_AGENT = ROOT / ".github" / "agents" / "astra-gateway.agent.md"
 GITIGNORE = ROOT / ".gitignore"
 LOCAL_GATEWAY_CALIBRATION = "config/gateway-calibration.local.json"

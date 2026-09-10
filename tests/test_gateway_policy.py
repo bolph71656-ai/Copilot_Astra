@@ -46,6 +46,7 @@ class GatewayPolicyTests(unittest.TestCase):
                 "risk_class": "standard",
                 "oracle_strength": "deterministic",
                 "samples": 250,
+                "cost_ratio_samples": 250,
                 "false_downroute_upper_bound": 0.015,
                 "validated_correct_lower_bound": 0.97,
                 "authority_rescue_upper_bound": 0.04,
@@ -73,6 +74,13 @@ class GatewayPolicyTests(unittest.TestCase):
         result = evaluate_gateway(**{**self.base, "risk_class": "standard", "calibration": calibration})
         self.assertEqual(result["decision"], "ESCALATE")
         self.assertIn("insufficient-confidence-level", result["reasons"])
+
+    def test_sparse_cost_evidence_cannot_unlock_standard(self):
+        calibration = self._good_standard_calibration()
+        calibration["entries"][0]["cost_ratio_samples"] = 5
+        result = evaluate_gateway(**{**self.base, "risk_class": "standard", "calibration": calibration})
+        self.assertEqual(result["decision"], "ESCALATE")
+        self.assertIn("insufficient-cost-samples", result["reasons"])
 
     def test_global_rollback_pauses_even_bootstrap_direct_work(self):
         calibration = {

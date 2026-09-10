@@ -1,6 +1,5 @@
 {
   "schema_version": 1,
-  "mode": "bootstrap",
   "bootstrap": {
     "direct_risk_classes": ["exploratory"],
     "direct_oracle_strengths": ["deterministic"],
@@ -27,7 +26,7 @@
     "max_mean_cost_ratio_vs_authority_direct": 1.05
   },
   "notes": [
-    "Bootstrap mode is intentionally narrow: only exploratory work with a decisive deterministic oracle may complete directly.",
+    "Bootstrap policy is intentionally narrow: only exploratory work with a decisive deterministic oracle may complete directly.",
     "Standard-risk direct completion requires a local calibrated evidence file that clears conservative confidence bounds; seed worker priors never authorize gateway expansion.",
     "The gateway remains a semantic classifier, so this policy script is a fail-closed second check rather than proof that the task was classified correctly.",
     "High and critical work never completes directly at the gateway.",

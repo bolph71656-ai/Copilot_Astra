@@ -43,31 +43,20 @@ def load_calibration(path: Path = LOCAL_CALIBRATION_PATH) -> dict | None:
     return raw
 
 
-def _entry_score(row: dict, *, task_class: str, risk_class: str, oracle_strength: str) -> tuple[int, int, int] | None:
-    task = str(row.get("task_class", "*"))
-    risk = str(row.get("risk_class", "*"))
-    oracle = str(row.get("oracle_strength", "*"))
-    if task not in {"*", task_class} or risk not in {"*", risk_class} or oracle not in {"*", oracle_strength}:
-        return None
-    return (
-        1 if task == task_class else 0,
-        1 if risk == risk_class else 0,
-        1 if oracle == oracle_strength else 0,
-    )
-
-
 def resolve_calibration(calibration: dict | None, *, task_class: str, risk_class: str, oracle_strength: str) -> dict | None:
+    """Return only exact bucket evidence; wildcard/generalized evidence cannot unlock direct work."""
     if calibration is None:
         return None
-    matches: list[tuple[tuple[int, int, int], dict]] = []
-    for row in calibration.get("entries", []):
-        score = _entry_score(row, task_class=task_class, risk_class=risk_class, oracle_strength=oracle_strength)
-        if score is not None:
-            matches.append((score, row))
-    if not matches:
+    matches = [
+        row
+        for row in calibration.get("entries", [])
+        if str(row.get("task_class")) == task_class
+        and str(row.get("risk_class")) == risk_class
+        and str(row.get("oracle_strength")) == oracle_strength
+    ]
+    if len(matches) != 1:
         return None
-    row = max(matches, key=lambda item: item[0])[1]
-    return {**row, "_confidence_z": calibration.get("confidence_z")}
+    return {**matches[0], "_confidence_z": calibration.get("confidence_z")}
 
 
 def rollback_reasons(calibration: dict | None, policy: dict) -> list[str]:
@@ -95,7 +84,7 @@ def rollback_reasons(calibration: dict | None, policy: dict) -> list[str]:
 
 def calibrated_entry_reasons(entry: dict | None, policy: dict) -> list[str]:
     if entry is None:
-        return ["no-calibrated-evidence"]
+        return ["no-exact-calibrated-evidence"]
     cfg = policy["calibrated"]
     reasons: list[str] = []
     confidence_z = entry.get("_confidence_z")

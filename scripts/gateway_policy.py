@@ -65,7 +65,11 @@ def rollback_reasons(calibration: dict | None, policy: dict) -> list[str]:
     summary = calibration.get("global") or {}
     rollback = policy["rollback"]
     samples = int(summary.get("samples", 0) or 0)
+    cost_samples = int(summary.get("cost_ratio_samples", 0) or 0)
     reasons: list[str] = []
+    if rollback.get("pause_on_any_high_or_critical_direct_attempt", True):
+        if int(summary.get("high_or_critical_direct_attempts", 0) or 0) > 0:
+            reasons.append("high-or-critical-direct-attempt")
     if rollback.get("pause_on_any_high_or_critical_false_downroute", True):
         if int(summary.get("high_or_critical_false_downroutes", 0) or 0) > 0:
             reasons.append("high-or-critical-false-downroute")
@@ -76,6 +80,7 @@ def rollback_reasons(calibration: dict | None, policy: dict) -> list[str]:
         rescue_rate = summary.get("authority_rescue_rate")
         if rescue_rate is not None and float(rescue_rate) > float(rollback["max_authority_rescue_rate"]):
             reasons.append("authority-rescue-rate")
+    if cost_samples >= int(rollback.get("min_cost_samples", 0)):
         cost_ratio = summary.get("mean_cost_ratio_vs_authority_direct")
         if cost_ratio is not None and float(cost_ratio) > float(rollback["max_mean_cost_ratio_vs_authority_direct"]):
             reasons.append("gateway-cost-regression")

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "mode": "bootstrap",
+  "bootstrap": {
+    "direct_risk_classes": ["exploratory"],
+    "direct_oracle_strengths": ["deterministic"],
+    "require_explicit_acceptance": true,
+    "require_local_bounded_surface": true,
+    "require_no_human_validation": true
+  },
+  "calibrated": {
+    "enabled": true,
+    "direct_risk_classes": ["exploratory", "standard"],
+    "direct_oracle_strengths": ["deterministic"],
+    "min_samples": 100,
+    "confidence_z": 1.96,
+    "max_false_downroute_upper_bound": 0.02,
+    "min_validated_correct_lower_bound": 0.94,
+    "max_authority_rescue_upper_bound": 0.05,
+    "max_mean_cost_ratio_vs_authority_direct": 0.95
+  },
+  "rollback": {
+    "min_samples": 20,
+    "pause_on_any_high_or_critical_false_downroute": true,
+    "max_false_downroute_rate": 0.03,
+    "max_authority_rescue_rate": 0.15,
+    "max_mean_cost_ratio_vs_authority_direct": 1.05
+  },
+  "notes": [
+    "Bootstrap mode is intentionally narrow: only exploratory work with a decisive deterministic oracle may complete directly.",
+    "Standard-risk direct completion requires a local calibrated evidence file that clears conservative confidence bounds; seed worker priors never authorize gateway expansion.",
+    "The gateway remains a semantic classifier, so this policy script is a fail-closed second check rather than proof that the task was classified correctly.",
+    "High and critical work never completes directly at the gateway.",
+    "If calibration is missing, malformed, sparse, or worse than rollback thresholds, escalate to the authority parent."
+  ]
+}

@@ -28,6 +28,8 @@ from scripts.model_registry import (
 AGENT_DIR = ROOT / ".github" / "agents"
 TEMPLATE_DIR = ROOT / ".github" / "agent-templates"
 SEED_PRIORS_PATH = ROOT / "config" / "routing-priors.json"
+GATEWAY_FILENAME = "astra-gateway.agent.md"
+PARENT_FILENAME = "astra-orchestrator.agent.md"
 
 
 @dataclass(frozen=True)
@@ -63,6 +65,13 @@ def _replace_tokens(text: str, values: dict[str, str]) -> str:
     if "<<" in text or ">>" in text:
         raise ValueError("unresolved agent-template token")
     return text
+
+
+def gateway_model_id(registry: dict) -> str | None:
+    """Return the cheapest active non-authority entry model, if one exists."""
+    route = active_model_ids(registry)
+    authority = authority_model_id(registry)
+    return route[0] if route and route[0] != authority else None
 
 
 def desired_agent_specs(registry: dict) -> list[AgentSpec]:
@@ -140,6 +149,47 @@ def render_parent(registry: dict, specs: list[AgentSpec], *, template_dir: Path 
     return "\n".join(front) + body.rstrip() + "\n"
 
 
+def render_gateway(registry: dict, *, template_dir: Path = TEMPLATE_DIR) -> str | None:
+    gateway_id = gateway_model_id(registry)
+    if gateway_id is None:
+        return None
+    gateway = registry["models"][gateway_id]
+    authority_id = authority_model_id(registry)
+    authority = registry["models"][authority_id]
+    parent_name = str(registry.get("parent_agent_name", "Astra Orchestrator"))
+    description = (
+        f"Fail-closed low-cost admission controller on {gateway['display_name']}; complete only obvious low-risk "
+        f"machine-verifiable work, otherwise escalate intact to {parent_name}."
+    )
+    front = [
+        "---",
+        "name: Astra Gateway",
+        _frontmatter_line("description", json.dumps(description, ensure_ascii=False)),
+        'argument-hint: "[goal] [constraints] [acceptance criteria]"',
+        "target: vscode",
+        _frontmatter_line("model", gateway["copilot_model"]),
+        _frontmatter_line("tools", ["agent", "read", "search", "edit", "execute", "todo"]),
+        _frontmatter_line("agents", [parent_name]),
+        "user-invocable: true",
+        "disable-model-invocation: true",
+        "---",
+        "",
+        "<!-- GENERATED: edit .github/agent-templates/gateway.md or config/model-registry.json, then run scripts/sync_model_config.py --write. -->",
+        "",
+    ]
+    body = (template_dir / "gateway.md").read_text(encoding="utf-8")
+    body = _replace_tokens(
+        body,
+        {
+            "GATEWAY_DISPLAY": str(gateway["display_name"]),
+            "GATEWAY_ID": gateway_id,
+            "AUTHORITY_NAME": parent_name,
+            "AUTHORITY_DISPLAY": str(authority["display_name"]),
+        },
+    )
+    return "\n".join(front) + body.rstrip() + "\n"
+
+
 def render_subagent(registry: dict, spec: AgentSpec, *, template_dir: Path = TEMPLATE_DIR) -> str:
     model = registry["models"][spec.model_id]
     meta = ROLE_META[spec.role]
@@ -174,7 +224,10 @@ def render_subagent(registry: dict, spec: AgentSpec, *, template_dir: Path = TEM
 
 def desired_agent_files(registry: dict, *, template_dir: Path = TEMPLATE_DIR) -> dict[str, str]:
     specs = desired_agent_specs(registry)
-    result = {"astra-orchestrator.agent.md": render_parent(registry, specs, template_dir=template_dir)}
+    result = {PARENT_FILENAME: render_parent(registry, specs, template_dir=template_dir)}
+    gateway = render_gateway(registry, template_dir=template_dir)
+    if gateway is not None:
+        result[GATEWAY_FILENAME] = gateway
     for spec in specs:
         result[spec.filename] = render_subagent(registry, spec, template_dir=template_dir)
     return result
@@ -276,9 +329,17 @@ def write_generated(root: Path = ROOT, registry: dict | None = None) -> None:
 
 
 def topology_summary(registry: dict) -> str:
+    authority = authority_model_id(registry)
+    gateway = gateway_model_id(registry)
+    parent_name = str(registry.get("parent_agent_name", "Astra Orchestrator"))
     lines = [
-        f"authority: {authority_model_id(registry)} ({model_display_name(registry, authority_model_id(registry))})",
+        f"authority: {authority} ({model_display_name(registry, authority)})",
         "route: " + " -> ".join(active_model_ids(registry)),
+        (
+            f"gateway: {gateway} ({model_display_name(registry, gateway)}) -> {parent_name}"
+            if gateway is not None
+            else "gateway: disabled (authority-only topology)"
+        ),
     ]
     for role in ROLE_ORDER:
         selected = select_role_model_ids(registry, role)

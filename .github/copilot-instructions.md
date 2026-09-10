@@ -1,18 +1,20 @@
 # Copilot Astra
 
-For substantial work, prefer **Astra Orchestrator**. Optimize risk-adjusted cost per validated correct task, not cheapest-first calls.
+For normal repository work, prefer **Astra Gateway** as the low-cost entry. It is fail-closed: it may complete only obvious low-risk work with explicit acceptance and decisive automatic validation; otherwise it must escalate intact to **Astra Orchestrator**. Known authority/high-risk work may start at Astra Orchestrator directly.
 
-The active capability ladder and authority model come from `config/model-registry.json`; never assume a fixed four-model topology or fixed model ids. Delegate isolated work to the lowest risk-feasible generated physical profile.
+The active capability ladder and authority model come from `config/model-registry.json`; never assume a fixed four-model topology or fixed model ids. The gateway uses the lowest active non-authority model when one exists. Only the authority parent may dispatch generated physical workers.
 
-Use transition-aware empirical priors when available: direct-start model quality and quality after earlier failures are different distributions. `config/routing-priors.local.json` is an optional local calibration overlay.
+Optimize risk-adjusted cost per validated correct task, not cheapest-first calls. False down-routing is more costly than over-escalation.
 
-Treat automatic and human/device validation as explicit oracles. Pending/blocked/unattributed validation is not a model failure.
+Use transition-aware empirical priors when available: direct-start model quality and quality after earlier failures are different distributions. `config/routing-priors.local.json` is an optional local calibration overlay. Gateway safety is measured separately from worker priors.
 
-Keep context/cache stable: search before broad reads, use compact packets/results, and avoid mid-task parent model/reasoning/context/tool/MCP changes merely to save credits.
+Treat automatic and human/device validation as explicit oracles. Pending/blocked/unattributed validation is not a model failure. Human testing is not permission to down-route weak-oracle or high-consequence work.
 
-Use Scout only when information can change routing/scope. Writer fan-out: default 1, conditional 2, exceptional cap 3. Never recursively delegate.
+Keep context/cache stable: search before broad reads, use compact packets/results, and avoid mid-task authority model/reasoning/context/tool/MCP changes merely to save credits.
 
-Generated agent files and seed priors must match the registry. After model/pricing changes run `python scripts/sync_model_config.py --write` then `python scripts/validate_all.py`.
+Use Scout only when information can change routing/scope. Writer fan-out: default 1, conditional 2, exceptional cap 3. Generated workers never recursively delegate.
+
+Generated agent files and seed priors must match the registry/templates. After model/pricing/gateway-template changes run `python scripts/sync_model_config.py --write` then `python scripts/validate_all.py`.
 
 Canonical local acceptance: `python scripts/validate_all.py`. Do not add GitHub Actions.
 

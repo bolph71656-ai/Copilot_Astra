@@ -19,7 +19,13 @@ from scripts.model_registry import (
     load_model_registry,
 )
 from scripts.routing_pricing import _load as load_pricing
-from scripts.sync_model_config import check_generated, desired_agent_specs
+from scripts.sync_model_config import (
+    GATEWAY_FILENAME,
+    PARENT_FILENAME,
+    check_generated,
+    desired_agent_specs,
+    gateway_model_id,
+)
 
 AGENT_DIR = ROOT / ".github" / "agents"
 
@@ -53,7 +59,9 @@ def validate_agents(registry: dict) -> list[str]:
     errors = check_generated(ROOT, registry)
     specs = desired_agent_specs(registry)
     by_filename = {spec.filename: spec for spec in specs}
-    parent_path = AGENT_DIR / "astra-orchestrator.agent.md"
+    parent_name = str(registry.get("parent_agent_name", "Astra Orchestrator"))
+
+    parent_path = AGENT_DIR / PARENT_FILENAME
     if not parent_path.exists():
         return errors + ["missing parent agent"]
     parent_text = parent_path.read_text(encoding="utf-8")
@@ -64,12 +72,40 @@ def validate_agents(registry: dict) -> list[str]:
         errors.append("parent model must match registry authority model")
     if list_value(parent_fm, "agents") != [spec.name for spec in specs]:
         errors.append("parent generated allowlist mismatch")
-    if "'agent'" not in scalar(parent_fm, "tools") and '"agent"' not in scalar(parent_fm, "tools"):
+    parent_tools = list_value(parent_fm, "tools") or []
+    if "agent" not in parent_tools:
         errors.append("parent missing agent tool")
     if scalar(parent_fm, "user-invocable") != "true" or scalar(parent_fm, "disable-model-invocation") != "true":
         errors.append("parent invocation controls invalid")
+
+    gateway_id = gateway_model_id(registry)
+    gateway_path = AGENT_DIR / GATEWAY_FILENAME
+    if gateway_id is None:
+        if gateway_path.exists():
+            errors.append("gateway must be absent for authority-only topology")
+    elif not gateway_path.exists():
+        errors.append("missing generated gateway")
+    else:
+        gateway_text = gateway_path.read_text(encoding="utf-8")
+        gateway_fm = frontmatter(gateway_text)
+        if scalar(gateway_fm, "name") != "Astra Gateway":
+            errors.append("gateway generated name mismatch")
+        if scalar(gateway_fm, "target") != "vscode":
+            errors.append("gateway target must be vscode")
+        if scalar(gateway_fm, "model") != registry["models"][gateway_id]["copilot_model"]:
+            errors.append("gateway model must match lowest active non-authority model")
+        if list_value(gateway_fm, "agents") != [parent_name]:
+            errors.append("gateway may only allowlist the authority parent")
+        gateway_tools = list_value(gateway_fm, "tools") or []
+        if "agent" not in gateway_tools:
+            errors.append("gateway missing agent tool")
+        if scalar(gateway_fm, "user-invocable") != "true" or scalar(gateway_fm, "disable-model-invocation") != "true":
+            errors.append("gateway invocation controls invalid")
+        if "fail-closed" not in gateway_text.lower():
+            errors.append("gateway must document fail-closed behavior")
+
     for path in AGENT_DIR.glob("*.agent.md"):
-        if path.name == parent_path.name:
+        if path.name in {PARENT_FILENAME, GATEWAY_FILENAME}:
             continue
         spec = by_filename.get(path.name)
         if spec is None:
@@ -272,11 +308,12 @@ def main() -> int:
         for error in errors:
             print(f"- {error}")
         return 1
+    profile_count = 1 + len(desired_agent_specs(registry)) + (1 if gateway_model_id(registry) is not None else 0)
     print(
         "Configuration validation passed: "
         f"{len(active_model_ids(registry))} active models, "
-        f"{1 + len(desired_agent_specs(registry))} generated VS Code profiles, "
-        "transition-aware priors + risk policy"
+        f"{profile_count} generated VS Code profiles, "
+        "fail-closed gateway + transition-aware priors + risk policy"
     )
     return 0
 
